@@ -67,6 +67,7 @@ export function ReviewPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<StatusSortMode>('severity')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [search, setSearch] = useState('')
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null)
 
   const count = useAsync(() => reviewApi.count(), [])
@@ -77,12 +78,32 @@ export function ReviewPage() {
 
   const items = useMemo(() => {
     const list = queue.data?.items || []
+    const q = search.trim().toLowerCase()
+    const searched = q
+      ? list.filter((i) => {
+          const hay = [
+            i.case_id,
+            i.customer_id,
+            i.customer_name,
+            i.invoice_id,
+            i.root_cause,
+            i.authorized_action,
+            i.requested_action,
+            i.policy_decision,
+            i.reason,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+          return hay.includes(q)
+        })
+      : list
     return sortByStatus(
-      filterByStatus(list, (i) => i.current_state, statusFilter),
+      filterByStatus(searched, (i) => i.current_state, statusFilter),
       (i) => i.current_state,
       sortMode,
     )
-  }, [queue.data, statusFilter, sortMode])
+  }, [queue.data, statusFilter, sortMode, search])
 
   function requestAct(
     caseId: string,
@@ -152,6 +173,13 @@ export function ReviewPage() {
 
       <Section title="Review Queue">
         <div className="filters">
+          <input
+            className="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by risk ID, customer, invoice, cause…"
+            aria-label="Search review queue"
+          />
           <StatusSortControls
             sortMode={sortMode}
             onSortModeChange={setSortMode}
@@ -169,7 +197,9 @@ export function ReviewPage() {
           <p style={{ color: 'var(--muted)' }}>No pending review items.</p>
         )}
         {queue.data && queue.data.items.length > 0 && items.length === 0 && (
-          <p style={{ color: 'var(--muted)' }}>No items match this status filter.</p>
+          <p style={{ color: 'var(--muted)' }}>
+            No items match this {search.trim() ? 'search / ' : ''}status filter.
+          </p>
         )}
         {items.map((item) => {
           const copy = escalationCopy(item)

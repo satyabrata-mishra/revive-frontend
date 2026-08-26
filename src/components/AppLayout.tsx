@@ -4,6 +4,7 @@ import { HistoryNav } from './BackButton'
 
 const links = [
   { to: '/dashboard', label: 'Dashboard', end: true },
+  { to: '/forecast', label: 'Forecast' },
   { to: '/cases', label: 'Cases' },
   { to: '/monitoring', label: 'Monitoring' },
   { to: '/review', label: 'Human Review' },

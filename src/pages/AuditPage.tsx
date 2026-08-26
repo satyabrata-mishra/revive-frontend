@@ -50,6 +50,15 @@ export function AuditPage() {
     return sortByStatus(items, (c) => c.current_state, sortMode)
   }, [cases.data, sortMode])
 
+  // API returns newest-first; re-sort by timestamp only (stable) as a safety net.
+  const timelineEvents = useMemo(() => {
+    const list = [...(timeline.data?.events || [])]
+    list.sort((a, b) =>
+      String(b.timestamp || '').localeCompare(String(a.timestamp || '')),
+    )
+    return list
+  }, [timeline.data])
+
   useEffect(() => {
     setOffset(0)
   }, [debouncedInput, statusFilter])
@@ -280,24 +289,26 @@ export function AuditPage() {
 
         {timeline.loading && <Loading />}
         {timeline.error && <ErrorState message={timeline.error} />}
-        {timeline.data?.events?.length ? (
-          <ul className="timeline">
-            {timeline.data.events.map((e, i) => (
-              <li key={`${e.event}-${i}`}>
-                <span className="ts">{formatTs(e.timestamp)}</span>
-                <span>
-                  <strong>{e.event}</strong>
-                  <span style={{ color: 'var(--muted)' }}> · actor REVIVE</span>
-                  {e.detail != null && e.detail !== '' ? (
-                    <span style={{ color: 'var(--muted)' }}>
-                      {' '}
-                      · {String(e.detail)}
-                    </span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
+        {timelineEvents.length ? (
+          <div className="timeline-scroll">
+            <ul className="timeline">
+              {timelineEvents.map((e, i) => (
+                <li key={`${e.event}-${i}`}>
+                  <span className="ts">{formatTs(e.timestamp)}</span>
+                  <span>
+                    <strong>{e.event}</strong>
+                    <span style={{ color: 'var(--muted)' }}> · actor REVIVE</span>
+                    {e.detail != null && e.detail !== '' ? (
+                      <span style={{ color: 'var(--muted)' }}>
+                        {' '}
+                        · {String(e.detail)}
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : (
           !timeline.loading &&
           selected && (

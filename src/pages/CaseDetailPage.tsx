@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { casesApi, executionApi, monitoringApi, policyApi } from '../api'
+import { casesApi, executionApi, forecastApi, monitoringApi, policyApi, simulationApi } from '../api'
 import type { AuditEvent, ExecuteResponse } from '../api/types'
 import { StatusBadge } from '../components/StatusBadge'
 import { Badge, ErrorState, Loading, Section } from '../components/ui'
@@ -44,6 +44,8 @@ export function CaseDetailPage() {
   const unified = useAsync(() => casesApi.get(caseId), [caseId])
   const policy = useAsync(() => policyApi.get(caseId), [caseId])
   const executions = useAsync(() => executionApi.listForCase(caseId), [caseId])
+  const whatIf = useAsync(() => simulationApi.actionComparison(caseId), [caseId])
+  const caseForecast = useAsync(() => forecastApi.case(caseId), [caseId])
 
   const executableAction = useMemo(() => {
     const auth = policy.data?.authorized_action
@@ -252,9 +254,17 @@ export function CaseDetailPage() {
   const outcomeDecision = (outcomeBlock.decision || {}) as Record<string, unknown>
   const nextActionObj = outcomeBlock.next_action as Record<string, unknown> | undefined
   const ledger = (c.ledger || {}) as Record<string, unknown>
-  const timelineEvents = ([...(c.audit_trail || [])] as AuditEvent[]).sort((a, b) =>
-    String(b.timestamp || '').localeCompare(String(a.timestamp || '')),
-  )
+  const timelineEvents = ([...(c.audit_trail || [])] as AuditEvent[])
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => {
+      const ta = String(a.e.timestamp || '')
+      const tb = String(b.e.timestamp || '')
+      if (ta !== tb) return tb.localeCompare(ta)
+      // Same / missing timestamp → later appends are more recent
+      return b.i - a.i
+    })
+    .map(({ e }) => e)
+
   const candidateActions = (
     (strategy?.candidate_actions as unknown[]) ||
     (nest(c.strategy as Record<string, unknown>, 'candidate_actions') as unknown[]) ||
@@ -480,6 +490,75 @@ export function CaseDetailPage() {
         </>
       </Section>
 
+      <div className="grid-2">
+        <Section title="Recovery Forecast">
+          {caseForecast.loading && <Loading size="sm" label="Forecast" />}
+          {caseForecast.data && (
+            <>
+              <p className="muted-note">{caseForecast.data.disclaimer}</p>
+              <dl className="kv">
+                <dt>Outstanding</dt>
+                <dd>{formatINRExact(caseForecast.data.current_outstanding)}</dd>
+                <dt>Expected recovery</dt>
+                <dd>{formatINRExact(caseForecast.data.expected_recovery)}</dd>
+                <dt>Expected date</dt>
+                <dd>{caseForecast.data.expected_recovery_date || '—'}</dd>
+                <dt>Expected remaining</dt>
+                <dd>{formatINRExact(caseForecast.data.expected_remaining_balance)}</dd>
+                <dt>Recovery P</dt>
+                <dd>{formatPct(caseForecast.data.recovery_probability)}</dd>
+              </dl>
+            </>
+          )}
+        </Section>
+
+        <Section title="What If?">
+          {whatIf.loading && <Loading size="sm" label="What-if" />}
+          {whatIf.data && (
+            <>
+              <p className="muted-note">{whatIf.data.disclaimer}</p>
+              <div className="table-wrap">
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th>Action</th>
+                      <th>Expected</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {whatIf.data.actions.map((row) => (
+                      <tr
+                        key={row.action}
+                        className={row.is_recommended ? 'row-recommended' : undefined}
+                      >
+                        <td>
+                          {formatAction(row.action)}
+                          {row.is_recommended && (
+                            <Badge tone="ok">recommended</Badge>
+                          )}
+                          {!row.allowed && <Badge tone="bad">blocked</Badge>}
+                        </td>
+                        <td>
+                          <strong>{formatINRExact(row.expected_recovery)}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {whatIf.data.recommended_action && (
+                <div className="decision-banner ok" style={{ marginTop: '0.85rem' }}>
+                  Revive recommends: {formatAction(whatIf.data.recommended_action)}
+                </div>
+              )}
+              <p style={{ marginTop: '0.5rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
+                {whatIf.data.recommendation_reason}
+              </p>
+            </>
+          )}
+        </Section>
+      </div>
+
       <Section title="Policy Validation">
         {policy.loading && <Loading />}
         {policy.data && (
@@ -502,7 +581,27 @@ export function CaseDetailPage() {
               <dd>{formatAction(policy.data.requested_action)}</dd>
               <dt>Authorized</dt>
               <dd>{formatAction(policy.data.authorized_action)}</dd>
+              {policy.data.review_status && (
+                <>
+                  <dt>Human review</dt>
+                  <dd>{policy.data.review_status}</dd>
+                </>
+              )}
+              {policy.data.reviewed_at && (
+                <>
+                  <dt>Reviewed at</dt>
+                  <dd>{formatTs(policy.data.reviewed_at)}</dd>
+                </>
+              )}
             </dl>
+            {policy.data.reviewer_note && (
+              <div className="reviewer-note" style={{ marginTop: '0.85rem' }}>
+                <div className="metric-label">Reviewer note</div>
+                <p style={{ margin: '0.35rem 0 0', whiteSpace: 'pre-wrap' }}>
+                  {policy.data.reviewer_note}
+                </p>
+              </div>
+            )}
             <ul className="rule-list" style={{ marginTop: '0.75rem' }}>
               {(policy.data.rules_evaluated || []).map((rule) => {
                 const passed = policy.data!.rules_passed.includes(rule)
@@ -641,38 +740,42 @@ export function CaseDetailPage() {
           </div>
         )}
         {liveResult?.audit_events?.length ? (
-          <ul className="timeline" style={{ marginTop: '0.75rem' }}>
-            {liveResult.audit_events.map((ev, i) => (
-              <li key={`${ev}-${i}`}>
-                <span className="ts">live</span>
-                <span>
-                  <strong>{ev}</strong>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="timeline-scroll" style={{ marginTop: '0.75rem' }}>
+            <ul className="timeline">
+              {[...liveResult.audit_events].reverse().map((ev, i) => (
+                <li key={`${ev}-${i}`}>
+                  <span className="ts">live</span>
+                  <span>
+                    <strong>{ev}</strong>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </Section>
 
       <div className="grid-2">
         <Section title="Execution Timeline">
           {timelineEvents.length ? (
-            <ul className="timeline">
-              {timelineEvents.map((e, i) => (
-                <li key={`${e.event}-${i}`}>
-                  <span className="ts">{formatTs(e.timestamp)}</span>
-                  <span>
-                    <strong>{e.event}</strong>
-                    {e.detail != null && e.detail !== '' ? (
-                      <span style={{ color: 'var(--muted)' }}>
-                        {' '}
-                        — {String(e.detail)}
-                      </span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="timeline-scroll">
+              <ul className="timeline">
+                {timelineEvents.map((e, i) => (
+                  <li key={`${e.event}-${i}`}>
+                    <span className="ts">{formatTs(e.timestamp)}</span>
+                    <span>
+                      <strong>{e.event}</strong>
+                      {e.detail != null && e.detail !== '' ? (
+                        <span style={{ color: 'var(--muted)' }}>
+                          {' '}
+                          — {String(e.detail)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : (
             <p style={{ color: 'var(--muted)' }}>No audit events.</p>
           )}

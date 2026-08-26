@@ -100,6 +100,20 @@ export function DashboardPage() {
         />
       </div>
 
+      <Section
+        title="What's next?"
+        right={
+          <Link to="/forecast" className="row-link">
+            Open Forecast →
+          </Link>
+        }
+      >
+        <p style={{ color: 'var(--muted)', margin: 0 }}>
+          See expected 7/14/30-day recovery, action what-ifs, portfolio simulation, and
+          risk heatmap — forecasts and counterfactuals, not guarantees.
+        </p>
+      </Section>
+
       <Section title="Recovery Pipeline">
         <div className="pipeline">
           {stages.map((st) => (

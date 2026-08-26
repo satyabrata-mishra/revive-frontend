@@ -132,6 +132,9 @@ export interface PolicyResponse {
   policy_reasons: string[]
   checks?: Record<string, { passed?: boolean; message?: string; basis?: string }> | null
   live: boolean
+  reviewer_note?: string | null
+  review_status?: string | null
+  reviewed_at?: string | null
 }
 
 export interface MonitorResponse {
@@ -327,4 +330,154 @@ export interface CaseListParams {
   q?: string
   limit?: number
   offset?: number
+}
+
+/** Day-19 forecast / simulation / analytics */
+export interface ForecastSummary {
+  current_ar_at_risk: number
+  currently_actionable: number
+  open_cases: number
+  actionable_cases: number
+  expected_7_day_recovery: number
+  expected_14_day_recovery: number
+  expected_30_day_recovery: number
+  expected_unrecovered: number
+  horizons: { days: number; expected_recovery: number; label: string }[]
+  disclaimer: string
+  source: string
+}
+
+export interface CaseForecast {
+  case_id: string
+  customer_id?: string | null
+  customer_name?: string | null
+  current_outstanding: number
+  expected_recovery: number
+  expected_recovery_date?: string | null
+  expected_remaining_balance: number
+  recovery_probability?: number | null
+  recovery_window_days?: number | null
+  root_cause?: string | null
+  recommended_action?: string | null
+  disclaimer: string
+}
+
+export interface CustomerForecast {
+  customer_id: string
+  customer_name?: string | null
+  outstanding: number
+  current_overdue_days?: number | null
+  historical_median_days?: number | null
+  deviation_days?: number | null
+  outcomes: {
+    full_recovery: number
+    partial_recovery: number
+    no_recovery: number
+  }
+  expected_recovery: number
+  open_cases: number
+  case_ids: string[]
+  disclaimer: string
+}
+
+export interface ActionWhatIfRow {
+  action: string
+  expected_recovery: number
+  recovery_probability?: number | null
+  action_cost?: number | null
+  eav?: number | null
+  allowed: boolean
+  policy_decision?: string | null
+  is_recommended: boolean
+}
+
+export interface ActionComparison {
+  case_id: string
+  customer_name?: string | null
+  outstanding: number
+  actions: ActionWhatIfRow[]
+  recommended_action?: string | null
+  recommendation_reason: string
+  disclaimer: string
+}
+
+export interface PortfolioSimulation {
+  scope: string
+  current_cases: number
+  current_revenue_at_risk: number
+  potentially_actionable: number
+  human_gated: number
+  autonomous_candidates: number
+  expected_recovery: number
+  expected_cost: number
+  expected_net_recovery: number
+  disclaimer: string
+}
+
+export interface TrendPoint {
+  day: number
+  date?: string | null
+  amount_recovered_cumulative: number
+  amount_recovered_daily: number
+  recovery_rate?: number | null
+  outstanding_balance?: number | null
+  active_cases?: number | null
+  escalations?: number | null
+  avg_recovery_days?: number | null
+}
+
+export interface RecoveryTrend {
+  points: TrendPoint[]
+  total_recovered: number
+  days: number
+  disclaimer: string
+}
+
+export interface VelocityBucket {
+  key: string
+  amount_recovered: number
+  recovery_days: number
+  velocity_per_day: number
+  n_cases: number
+}
+
+export interface RecoveryVelocity {
+  merchant: VelocityBucket
+  by_customer: VelocityBucket[]
+  by_action: VelocityBucket[]
+  by_root_cause: VelocityBucket[]
+  disclaimer: string
+}
+
+export interface RootCauseShare {
+  root_cause: string
+  label: string
+  share: number
+  outstanding: number
+  n_cases: number
+  recommended_action?: string | null
+}
+
+export interface RootCauseIntelligence {
+  causes: RootCauseShare[]
+  total_outstanding: number
+  strategy_map: Record<string, string>
+  disclaimer: string
+}
+
+export interface HeatmapCell {
+  quadrant: string
+  label: string
+  tone: string
+  n_cases: number
+  outstanding: number
+  case_ids: string[]
+  description: string
+}
+
+export interface RiskHeatmap {
+  cells: HeatmapCell[]
+  value_threshold: number
+  recovery_threshold: number
+  disclaimer: string
 }

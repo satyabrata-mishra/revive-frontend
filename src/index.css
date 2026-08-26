@@ -793,7 +793,111 @@ button.primary .loading-spinner {
 
 .timeline {
   position: relative;
-  padding-left: 0.25rem;
+  margin: 0;
+  padding: 0.15rem 0 0.15rem 0.15rem;
+}
+
+.timeline-scroll {
+  --trail-pad: 0.85rem;
+  position: relative;
+  max-height: min(420px, 55vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  margin: 0.35rem 0 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
+  border-radius: calc(var(--radius) + 2px);
+  background:
+    linear-gradient(165deg, #ffffff 0%, #f3f7fc 48%, #eef4fb 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 10px 28px rgba(21, 87, 192, 0.07);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, var(--line)) transparent;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 16px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 16px),
+    transparent 100%
+  );
+}
+
+.timeline-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.timeline-scroll::-webkit-scrollbar-track {
+  margin: 0.5rem 0;
+  background: transparent;
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background-color: color-mix(in srgb, var(--accent) 42%, #9db4d8);
+}
+
+.timeline-scroll .timeline {
+  padding: 0.45rem 0.95rem 0.85rem 0.85rem;
+}
+
+.timeline-scroll .timeline::before {
+  content: '';
+  position: absolute;
+  top: 1rem;
+  bottom: 1rem;
+  left: 1.28rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cyan) 60%, var(--accent-soft)),
+    color-mix(in srgb, var(--accent) 40%, var(--line)) 55%,
+    color-mix(in srgb, var(--line) 80%, transparent)
+  );
+  opacity: 0.9;
+}
+
+.timeline-scroll .timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  gap: 0.85rem;
+  margin: 0 0 0.4rem;
+  padding: 0.72rem 0.8rem 0.72rem 1.55rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  border-bottom: none;
+  background: transparent;
+}
+
+.timeline-scroll .timeline li::before {
+  content: '';
+  position: absolute;
+  top: 1.15rem;
+  left: 0.28rem;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 32%, #fff 0%, var(--cyan) 42%, var(--accent) 100%);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent-soft) 85%, #fff),
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+  z-index: 1;
+}
+
+.timeline-scroll .timeline li:last-child {
+  margin-bottom: 0;
 }
 
 .timeline li {
@@ -808,6 +912,58 @@ button.primary .loading-spinner {
 .timeline .ts {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+}
+
+.timeline-scroll .timeline .ts {
+  align-self: start;
+  margin-top: 0.1rem;
+  padding: 0.2rem 0.45rem;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-deep) 70%, #fff);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.timeline-scroll .timeline li > span:last-child {
+  min-width: 0;
+}
+
+.timeline-scroll .timeline li strong {
+  display: inline;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.timeline-scroll .timeline li > span:last-child > span {
+  display: inline;
+}
+
+@media (max-width: 640px) {
+  .timeline-scroll .timeline {
+    padding-left: 0.7rem;
+  }
+
+  .timeline-scroll .timeline::before {
+    left: 1.12rem;
+  }
+
+  .timeline-scroll .timeline li {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    padding-left: 1.55rem;
+  }
+
+  .timeline-scroll .timeline li::before {
+    left: 0.28rem;
+    top: 0.9rem;
+  }
 }
 
 .decision-banner {
@@ -1394,5 +1550,188 @@ button.primary .loading-spinner {
   .landing-flow-steps > li:not(.landing-flow-arrow):hover,
   .landing-cta:hover {
     transform: none;
+  }
+}
+
+/* Day-19 Forecast */
+.forecast-disclaimer,
+.muted-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.forecast-toolbar {
+  margin-bottom: 0.75rem;
+}
+
+.forecast-toolbar select {
+  margin-left: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: inherit;
+}
+
+.subhead {
+  margin: 1rem 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.compact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.compact-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 140px;
+  padding: 0.5rem 0.25rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.trend-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.trend-bar {
+  width: 100%;
+  background: linear-gradient(180deg, #2a6f6a, #1a4a46);
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+}
+
+.trend-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.cause-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cause-bars > li {
+  margin-bottom: 0.85rem;
+}
+
+.cause-bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.cause-bar-track {
+  height: 8px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cause-bar-fill {
+  height: 100%;
+  background: #2a6f6a;
+  border-radius: 4px;
+}
+
+.cause-strategy {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.heatmap-cell {
+  padding: 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.heatmap-cell .heatmap-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.heatmap-cell .heatmap-value {
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.heatmap-cell .heatmap-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.heatmap-cell p {
+  margin: 0.5rem 0 0.65rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.heatmap-cell.tone-critical {
+  border-color: #c45c5c;
+  background: color-mix(in srgb, #c45c5c 12%, var(--surface));
+}
+
+.heatmap-cell.tone-opportunity {
+  border-color: #c48a3a;
+  background: color-mix(in srgb, #c48a3a 12%, var(--surface));
+}
+
+.heatmap-cell.tone-monitor {
+  border-color: #b5a03a;
+  background: color-mix(in srgb, #b5a03a 10%, var(--surface));
+}
+
+.heatmap-cell.tone-automate {
+  border-color: #3a9a6a;
+  background: color-mix(in srgb, #3a9a6a 12%, var(--surface));
+}
+
+.row-recommended td {
+  background: color-mix(in srgb, #3a9a6a 10%, transparent);
+}
+
+.reviewer-note {
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent, #2a6f6a) 8%, var(--surface));
+}
+
+@media (max-width: 720px) {
+  .heatmap-grid {
+    grid-template-columns: 1fr;
   }
 }
