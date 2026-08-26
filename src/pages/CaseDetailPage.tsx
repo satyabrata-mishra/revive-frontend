@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import {
-  auditApi,
-  casesApi,
-  decisionApi,
-  executionApi,
-  monitoringApi,
-  policyApi,
-} from '../api'
-import type { ExecuteResponse } from '../api/types'
+import { casesApi, executionApi, monitoringApi, policyApi } from '../api'
+import type { AuditEvent, ExecuteResponse } from '../api/types'
 import { StatusBadge } from '../components/StatusBadge'
 import { Badge, ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -47,25 +40,39 @@ export function CaseDetailPage() {
   const [monitorMsg, setMonitorMsg] = useState<string | null>(null)
   const [previewMsg, setPreviewMsg] = useState<string | null>(null)
 
+  // Day-16 contract: hydrate primarily from unified case; policy + executions are live overlays.
   const unified = useAsync(() => casesApi.get(caseId), [caseId])
-  const diagnosis = useAsync(() => casesApi.diagnosis(caseId), [caseId])
-  const decision = useAsync(() => decisionApi.decision(caseId), [caseId])
-  const actions = useAsync(() => decisionApi.actions(caseId), [caseId])
   const policy = useAsync(() => policyApi.get(caseId), [caseId])
-  const monitor = useAsync(() => monitoringApi.monitor(caseId), [caseId])
-  const ledger = useAsync(() => casesApi.ledger(caseId), [caseId])
-  const timeline = useAsync(() => auditApi.timeline(caseId), [caseId])
   const executions = useAsync(() => executionApi.listForCase(caseId), [caseId])
-  const explanation = useAsync(() => casesApi.explanation(caseId), [caseId])
 
   const executableAction = useMemo(() => {
     const auth = policy.data?.authorized_action
-    const selected =
-      decision.data?.selected_action ||
-      decision.data?.day6_authorized_action ||
-      actions.data?.recommended_action
-    return auth || selected || null
-  }, [policy.data, decision.data, actions.data])
+    const caseAuth = unified.data
+      ? str(
+          nest(
+            unified.data.authorization as Record<string, unknown> | undefined,
+            'authorized_action',
+          ),
+        )
+      : undefined
+    const strategyPrimary = unified.data
+      ? str(
+          nest(
+            unified.data.strategy as Record<string, unknown> | undefined,
+            'strategy',
+            'primary_action',
+          ),
+        ) ||
+        str(
+          nest(
+            unified.data.optimization as Record<string, unknown> | undefined,
+            'decision',
+            'selected_action',
+          ),
+        )
+      : undefined
+    return auth || caseAuth || strategyPrimary || null
+  }, [policy.data, unified.data])
 
   const lastSuccessfulAction = useMemo(() => {
     const ok = (st: string) =>
@@ -80,8 +87,12 @@ export function CaseDetailPage() {
         return e.authorized_action || null
       }
     }
+    const uExec = unified.data?.execution as Record<string, unknown> | undefined
+    if (uExec && ok(String(uExec.status || ''))) {
+      return str(uExec.authorized_action) || null
+    }
     return null
-  }, [liveResult, executions.data])
+  }, [liveResult, executions.data, unified.data])
 
   const caseState =
     liveResult?.current_state || unified.data?.current_state
@@ -167,11 +178,7 @@ export function CaseDetailPage() {
   async function refreshAfterExecute() {
     unified.reload()
     policy.reload()
-    monitor.reload()
-    ledger.reload()
-    timeline.reload()
     executions.reload()
-    decision.reload()
   }
 
   async function handleExecute() {
@@ -235,6 +242,30 @@ export function CaseDetailPage() {
   const strategy = nest(c.strategy as Record<string, unknown>, 'strategy') as
     | Record<string, unknown>
     | undefined
+  const diagnosisBlock = (nest(c.diagnosis as Record<string, unknown>, 'diagnosis') ||
+    c.diagnosis ||
+    {}) as Record<string, unknown>
+  const optDecision = (nest(c.optimization as Record<string, unknown>, 'decision') ||
+    {}) as Record<string, unknown>
+  const outcomeBlock = (c.outcome || {}) as Record<string, unknown>
+  const outcomeInner = (outcomeBlock.outcome || {}) as Record<string, unknown>
+  const outcomeDecision = (outcomeBlock.decision || {}) as Record<string, unknown>
+  const nextActionObj = outcomeBlock.next_action as Record<string, unknown> | undefined
+  const ledger = (c.ledger || {}) as Record<string, unknown>
+  const timelineEvents = ([...(c.audit_trail || [])] as AuditEvent[]).sort((a, b) =>
+    String(b.timestamp || '').localeCompare(String(a.timestamp || '')),
+  )
+  const candidateActions = (
+    (strategy?.candidate_actions as unknown[]) ||
+    (nest(c.strategy as Record<string, unknown>, 'candidate_actions') as unknown[]) ||
+    []
+  ) as Array<Record<string, unknown> | string>
+  const whyCustomer =
+    (nest(c.optimization as Record<string, unknown>, 'why_this_customer') as string[]) ||
+    (nest(c.optimization as Record<string, unknown>, 'adaptive_decision', 'why_this_customer') as
+      | string[]
+      | undefined) ||
+    []
 
   const policyDecision =
     policy.data?.decision ||
@@ -247,12 +278,38 @@ export function CaseDetailPage() {
         : 'warn'
 
   const reasonText =
-    explanation.data?.decision_reason &&
-    typeof explanation.data.decision_reason === 'object' &&
-    'reason' in explanation.data.decision_reason
-      ? String((explanation.data.decision_reason as { reason?: unknown }).reason || '')
-      : str(strategy?.action_rationale) ||
-        'Recommendation comes from the Revive decision engine (strategy + policy filters).'
+    str(strategy?.action_rationale) ||
+    str(optDecision.reason) ||
+    'Recommendation comes from the Revive decision engine (strategy + policy filters).'
+
+  const diagnosisRoot =
+    str(diagnosisBlock.primary_root_cause) ||
+    str(diagnosisBlock.root_cause) ||
+    str(nest(c.strategy as Record<string, unknown>, 'root_cause'))
+  const diagnosisConfidence = num(diagnosisBlock.confidence) ?? num(diagnosisBlock.confidence_score)
+  const diagnosisBand = str(diagnosisBlock.confidence_band)
+  const diagnosisIntent = str(diagnosisBlock.payment_intent)
+  const diagnosisEvidence = (diagnosisBlock.evidence as unknown[]) || []
+  const selectedAction =
+    str(optDecision.selected_action) ||
+    str(strategy?.primary_action) ||
+    executableAction
+  const monitorOutcome =
+    liveResult?.monitoring_outcome || str(outcomeInner.type) || undefined
+  const nextAction =
+    liveResult?.next_action ||
+    str(nextActionObj?.action) ||
+    undefined
+  const amountRecovered =
+    liveResult?.amount_recovered ?? num(ledger.amount_recovered) ?? num(outcomeInner.amount_recovered)
+  const outstandingBefore =
+    liveResult?.outstanding_before ??
+    num(ledger.outstanding_before) ??
+    num(outcomeInner.outstanding_before)
+  const outstandingAfter =
+    liveResult?.outstanding_after ??
+    num(ledger.outstanding_after) ??
+    num(outcomeInner.outstanding_after)
 
   return (
     <div>
@@ -297,9 +354,7 @@ export function CaseDetailPage() {
           <div className="metric-card">
             <div className="metric-label">Recovered</div>
             <div className="metric-value">
-              {formatINRExact(
-                liveResult?.amount_recovered ?? ledger.data?.amount_recovered,
-              )}
+              {formatINRExact(amountRecovered)}
             </div>
           </div>
         </div>
@@ -320,85 +375,88 @@ export function CaseDetailPage() {
         </Section>
 
         <Section title="Root Cause">
-          {diagnosis.loading && <Loading />}
-          {diagnosis.data && (
-            <>
-              <dl className="kv">
-                <dt>Diagnosis</dt>
-                <dd>{formatCause(diagnosis.data.root_cause)}</dd>
-                <dt>Confidence</dt>
-                <dd>
-                  {formatPct(diagnosis.data.confidence)}{' '}
-                  {diagnosis.data.confidence_band && (
-                    <Badge tone="info">{diagnosis.data.confidence_band}</Badge>
-                  )}
-                </dd>
-                <dt>Payment intent</dt>
-                <dd>{diagnosis.data.payment_intent || '—'}</dd>
-              </dl>
-              {diagnosis.data.evidence?.length > 0 && (
-                <>
-                  <h3 style={{ margin: '0.85rem 0 0.35rem', fontSize: '0.85rem' }}>
-                    Evidence
-                  </h3>
-                  <ul className="evidence-list">
-                    {diagnosis.data.evidence.slice(0, 6).map((e, i) => {
-                      const text =
-                        typeof e === 'string'
-                          ? e
-                          : e && typeof e === 'object' && 'description' in e
-                            ? String((e as { description: unknown }).description)
-                            : JSON.stringify(e)
-                      return <li key={i}>{text}</li>
-                    })}
-                  </ul>
-                </>
-              )}
-            </>
-          )}
+          <>
+            <dl className="kv">
+              <dt>Diagnosis</dt>
+              <dd>{formatCause(diagnosisRoot)}</dd>
+              <dt>Confidence</dt>
+              <dd>
+                {formatPct(diagnosisConfidence)}{' '}
+                {diagnosisBand && <Badge tone="info">{diagnosisBand}</Badge>}
+              </dd>
+              <dt>Payment intent</dt>
+              <dd>{diagnosisIntent || '—'}</dd>
+            </dl>
+            {diagnosisEvidence.length > 0 && (
+              <>
+                <h3 style={{ margin: '0.85rem 0 0.35rem', fontSize: '0.85rem' }}>
+                  Evidence
+                </h3>
+                <ul className="evidence-list">
+                  {diagnosisEvidence.slice(0, 6).map((e, i) => {
+                    const text =
+                      typeof e === 'string'
+                        ? e
+                        : e && typeof e === 'object' && 'description' in e
+                          ? String((e as { description: unknown }).description)
+                          : JSON.stringify(e)
+                    return <li key={i}>{text}</li>
+                  })}
+                </ul>
+              </>
+            )}
+          </>
         </Section>
       </div>
 
       <Section title="Revive's Recommendation">
-        {decision.loading || actions.loading ? (
-          <Loading />
-        ) : (
-          <>
-            <dl className="kv">
-              <dt>Recommended action</dt>
-              <dd>
-                {formatAction(
-                  decision.data?.selected_action ||
-                    str(strategy?.primary_action) ||
-                    actions.data?.recommended_action,
-                )}
-              </dd>
-              <dt>Expected recovery</dt>
-              <dd>{formatINRExact(num(strategy?.expected_recovery))}</dd>
-              <dt>Confidence</dt>
-              <dd>{decision.data?.selected_confidence || '—'}</dd>
-              <dt>Customer-aware</dt>
-              <dd>{decision.data?.customer_aware ? 'Yes' : 'No'}</dd>
-            </dl>
-            <p style={{ marginTop: '0.75rem', color: 'var(--muted)', fontSize: '0.9rem' }}>
-              {reasonText}
-            </p>
-            {explanation.data?.why_this_customer?.length ? (
-              <ul className="evidence-list" style={{ marginTop: '0.75rem' }}>
-                {explanation.data.why_this_customer.map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
-              </ul>
-            ) : null}
-            {actions.data?.actions?.length ? (
-              <>
-                <h3 style={{ margin: '1rem 0 0.35rem', fontSize: '0.85rem' }}>
-                  Alternative actions
-                </h3>
-                <ul className="alt-actions">
-                  {actions.data.actions.map((a) => (
+        <>
+          <dl className="kv">
+            <dt>Recommended action</dt>
+            <dd>{formatAction(selectedAction)}</dd>
+            <dt>Expected recovery</dt>
+            <dd>{formatINRExact(num(strategy?.expected_recovery))}</dd>
+            <dt>Confidence</dt>
+            <dd>{str(optDecision.selected_confidence) || '—'}</dd>
+            <dt>Customer-aware</dt>
+            <dd>
+              {optDecision.customer_aware == null
+                ? '—'
+                : optDecision.customer_aware
+                  ? 'Yes'
+                  : 'No'}
+            </dd>
+          </dl>
+          <p style={{ marginTop: '0.75rem', color: 'var(--muted)', fontSize: '0.9rem' }}>
+            {reasonText}
+          </p>
+          {whyCustomer.length ? (
+            <ul className="evidence-list" style={{ marginTop: '0.75rem' }}>
+              {whyCustomer.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+          {candidateActions.length ? (
+            <>
+              <h3 style={{ margin: '1rem 0 0.35rem', fontSize: '0.85rem' }}>
+                Alternative actions
+              </h3>
+              <ul className="alt-actions">
+                {candidateActions.map((a, i) => {
+                  const action =
+                    typeof a === 'string' ? a : str((a as Record<string, unknown>).action)
+                  const allowed =
+                    typeof a === 'object'
+                      ? (a as Record<string, unknown>).allowed !== false
+                      : true
+                  const expected =
+                    typeof a === 'object'
+                      ? num((a as Record<string, unknown>).expected_recovery)
+                      : undefined
+                  return (
                     <li
-                      key={a.action}
+                      key={`${action}-${i}`}
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -406,20 +464,20 @@ export function CaseDetailPage() {
                       }}
                     >
                       <span>
-                        {formatAction(a.action)}{' '}
-                        {!a.allowed && <Badge tone="bad">blocked</Badge>}
-                        {a.action === actions.data?.recommended_action && (
+                        {formatAction(action)}{' '}
+                        {!allowed && <Badge tone="bad">blocked</Badge>}
+                        {action === selectedAction && (
                           <Badge tone="ok">recommended</Badge>
                         )}
                       </span>
-                      <strong>{formatINR(a.expected_recovery)}</strong>
+                      <strong>{formatINR(expected)}</strong>
                     </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-          </>
-        )}
+                  )
+                })}
+              </ul>
+            </>
+          ) : null}
+        </>
       </Section>
 
       <Section title="Policy Validation">
@@ -598,10 +656,9 @@ export function CaseDetailPage() {
 
       <div className="grid-2">
         <Section title="Execution Timeline">
-          {timeline.loading && <Loading />}
-          {timeline.data?.events?.length ? (
+          {timelineEvents.length ? (
             <ul className="timeline">
-              {timeline.data.events.map((e, i) => (
+              {timelineEvents.map((e, i) => (
                 <li key={`${e.event}-${i}`}>
                   <span className="ts">{formatTs(e.timestamp)}</span>
                   <span>
@@ -629,68 +686,42 @@ export function CaseDetailPage() {
         </Section>
 
         <Section title="Recovery">
-          {monitor.loading || ledger.loading ? (
-            <Loading />
-          ) : (
-            <>
-              {(monitor.data?.outcome_type === 'FULL_RECOVERY' ||
-                (ledger.data &&
-                  ledger.data.outstanding_after <= 0.01 &&
-                  ledger.data.amount_recovered > 0)) && (
-                <div className="decision-banner ok">FULL RECOVERY</div>
-              )}
-              {monitor.data?.outcome_type === 'PARTIAL_RECOVERY' && (
-                <div className="decision-banner warn">PARTIAL RECOVERY</div>
-              )}
-              <dl className="kv">
-                <dt>Before</dt>
-                <dd>
-                  {formatINRExact(
-                    liveResult?.outstanding_before ??
-                      monitor.data?.outstanding_before ??
-                      ledger.data?.outstanding_before,
-                  )}
-                </dd>
-                <dt>Recovered</dt>
-                <dd>
-                  {formatINRExact(
-                    liveResult?.amount_recovered ??
-                      monitor.data?.amount_recovered ??
-                      ledger.data?.amount_recovered,
-                  )}
-                </dd>
-                <dt>Remaining</dt>
-                <dd>
-                  {formatINRExact(
-                    liveResult?.outstanding_after ??
-                      monitor.data?.outstanding ??
-                      ledger.data?.outstanding_after,
-                  )}
-                </dd>
-                <dt>Recovery rate</dt>
-                <dd>{formatPct(ledger.data?.recovery_rate)}</dd>
-                <dt>Outcome</dt>
-                <dd>{monitor.data?.outcome_type || '—'}</dd>
-                <dt>Loop decision</dt>
-                <dd>{monitor.data?.loop_decision || '—'}</dd>
-              </dl>
-              {monitor.data?.next_action && (
-                <div className="decision-banner warn" style={{ marginTop: '0.85rem' }}>
-                  Next action: {formatAction(monitor.data.next_action)}
-                  {monitor.data.next_action_detail &&
-                  (monitor.data.next_action_detail as { requires_policy_validation?: boolean })
-                    .requires_policy_validation
-                    ? ' · policy validation required'
-                    : ''}
-                </div>
-              )}
-              {monitor.data?.stop_reason && (
-                <p style={{ marginTop: '0.5rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
-                  Stop reason: {monitor.data.stop_reason}
-                </p>
-              )}
-            </>
-          )}
+          <>
+            {(monitorOutcome === 'FULL_RECOVERY' ||
+              ((outstandingAfter ?? 1) <= 0.01 && (amountRecovered || 0) > 0)) && (
+              <div className="decision-banner ok">FULL RECOVERY</div>
+            )}
+            {monitorOutcome === 'PARTIAL_RECOVERY' && (
+              <div className="decision-banner warn">PARTIAL RECOVERY</div>
+            )}
+            <dl className="kv">
+              <dt>Before</dt>
+              <dd>{formatINRExact(outstandingBefore)}</dd>
+              <dt>Recovered</dt>
+              <dd>{formatINRExact(amountRecovered)}</dd>
+              <dt>Remaining</dt>
+              <dd>{formatINRExact(outstandingAfter)}</dd>
+              <dt>Recovery rate</dt>
+              <dd>{formatPct(num(ledger.recovery_rate))}</dd>
+              <dt>Outcome</dt>
+              <dd>{monitorOutcome || '—'}</dd>
+              <dt>Loop decision</dt>
+              <dd>{str(outcomeDecision.loop_decision) || '—'}</dd>
+            </dl>
+            {nextAction && (
+              <div className="decision-banner warn" style={{ marginTop: '0.85rem' }}>
+                Next action: {formatAction(nextAction)}
+                {nextActionObj?.requires_policy_validation
+                  ? ' · policy validation required'
+                  : ''}
+              </div>
+            )}
+            {str(outcomeDecision.stop_reason) && (
+              <p style={{ marginTop: '0.5rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
+                Stop reason: {str(outcomeDecision.stop_reason)}
+              </p>
+            )}
+          </>
         </Section>
       </div>
     </div>

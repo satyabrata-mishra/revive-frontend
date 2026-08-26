@@ -1,16 +1,36 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
 
+type ErrorBody = {
+  success?: boolean
+  error?: {
+    code?: string
+    message?: string
+    case_id?: string
+    retryable?: boolean
+    details?: unknown
+  }
+  code?: string
+  message?: string
+  details?: unknown
+}
+
 export class ApiError extends Error {
   code: string
   status: number
   details?: unknown
+  caseId?: string | null
+  retryable: boolean
 
-  constructor(status: number, body: { code?: string; message?: string; details?: unknown }) {
-    super(body.message || `API error ${status}`)
+  constructor(status: number, body: ErrorBody) {
+    const nested = body?.error
+    const message = nested?.message || body?.message || `API error ${status}`
+    super(message)
     this.name = 'ApiError'
-    this.code = body.code || 'UNKNOWN'
+    this.code = nested?.code || body?.code || 'UNKNOWN'
     this.status = status
-    this.details = body.details
+    this.details = nested?.details ?? body?.details
+    this.caseId = nested?.case_id ?? null
+    this.retryable = Boolean(nested?.retryable)
   }
 }
 
