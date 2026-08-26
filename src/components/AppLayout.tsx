@@ -24,7 +24,7 @@ export function AppLayout() {
       ([entry]) => {
         setToolbarStuck(!entry.isIntersecting)
       },
-      { threshold: 0, rootMargin: '-68px 0px 0px 0px' },
+      { threshold: 0, rootMargin: '-64px 0px 0px 0px' },
     )
     observer.observe(sentinel)
     return () => observer.disconnect()

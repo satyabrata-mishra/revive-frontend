@@ -111,8 +111,8 @@ export function MonitoringPage() {
                 <th>Case</th>
                 <th>Customer</th>
                 <th>Status</th>
-                <th>Recovered</th>
-                <th>Outstanding</th>
+                <th className="num">Recovered</th>
+                <th className="num">Outstanding</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -128,8 +128,8 @@ export function MonitoringPage() {
                   <td>
                     <StatusBadge status={c.current_state} />
                   </td>
-                  <td>{formatINR(c.amount_recovered)}</td>
-                  <td>{formatINR(c.outstanding_amount)}</td>
+                  <td className="num">{formatINR(c.amount_recovered)}</td>
+                  <td className="num">{formatINR(c.outstanding_amount)}</td>
                   <td>{formatAction(c.authorized_action || c.recommended_action)}</td>
                 </tr>
               ))}
@@ -137,11 +137,9 @@ export function MonitoringPage() {
           </table>
         </div>
         {display.length === 0 && (
-          <p style={{ marginTop: '0.75rem', color: 'var(--muted)' }}>
-            No cases match this status filter.
-          </p>
+          <p className="empty-hint">No cases match this status filter.</p>
         )}
-        <p style={{ marginTop: '0.75rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
+        <p className="empty-hint">
           Status badges come from Day-12 unified case state via the API — not recomputed in React.
         </p>
       </Section>

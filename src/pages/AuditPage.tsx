@@ -120,7 +120,7 @@ export function AuditPage() {
                   <tr>
                     <th>Case</th>
                     <th>Customer</th>
-                    <th>Amount</th>
+                    <th className="num">Amount</th>
                     <th>Action</th>
                     <th>Status</th>
                     <th>Events</th>
@@ -132,7 +132,7 @@ export function AuditPage() {
                       key={c.case_id}
                       style={
                         c.case_id === selected
-                          ? { background: 'rgba(99, 102, 241, 0.08)' }
+                          ? { background: 'var(--accent-soft)' }
                           : undefined
                       }
                     >
@@ -162,7 +162,7 @@ export function AuditPage() {
                         ) : null}
                       </td>
                       <td>{c.customer_name || '—'}</td>
-                      <td>{formatINR(c.outstanding_amount)}</td>
+                      <td className="num">{formatINR(c.outstanding_amount)}</td>
                       <td>{formatAction(c.authorized_action || c.recommended_action)}</td>
                       <td>
                         <StatusBadge status={c.current_state} />
@@ -178,7 +178,7 @@ export function AuditPage() {
                 Showing {cases.data.offset + 1}–
                 {cases.data.offset + cases.data.items.length} of {cases.data.total}
               </span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="pager-actions">
                 <button
                   type="button"
                   disabled={cases.data.offset <= 0}
@@ -198,9 +198,7 @@ export function AuditPage() {
           </>
         )}
         {cases.data && caseRows.length === 0 && (
-          <p style={{ marginTop: '0.75rem', color: 'var(--muted)' }}>
-            No cases match your filter.
-          </p>
+          <p className="empty-hint">No cases match your filter.</p>
         )}
       </Section>
 

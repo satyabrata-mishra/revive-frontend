@@ -159,7 +159,7 @@ export function DashboardPage() {
                 <thead>
                   <tr>
                     <th>Customer</th>
-                    <th>Amount</th>
+                    <th className="num">Amount</th>
                     <th>Cause</th>
                     <th>Action</th>
                     <th>Status</th>
@@ -176,7 +176,7 @@ export function DashboardPage() {
                           {c.case_id}
                         </div>
                       </td>
-                      <td>{formatINR(c.outstanding_amount)}</td>
+                      <td className="num">{formatINR(c.outstanding_amount)}</td>
                       <td>{formatCause(c.root_cause)}</td>
                       <td>{formatAction(c.recommended_action || c.authorized_action)}</td>
                       <td>
@@ -217,7 +217,7 @@ export function DashboardPage() {
                   <tr>
                     <th>Case</th>
                     <th>Customer</th>
-                    <th>Recovered</th>
+                    <th className="num">Recovered</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -237,7 +237,7 @@ export function DashboardPage() {
                           </Link>
                         </td>
                         <td>{c.customer_name || '—'}</td>
-                        <td>{formatINR(c.amount_recovered)}</td>
+                        <td className="num">{formatINR(c.amount_recovered)}</td>
                         <td>
                           <StatusBadge status={c.current_state} />
                         </td>
@@ -249,7 +249,7 @@ export function DashboardPage() {
             </div>
           )}
           {r.full_recovery_rate != null && (
-            <p style={{ marginTop: '0.75rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
+            <p className="empty-hint">
               Full recovery rate {formatPct(r.full_recovery_rate)} · partial{' '}
               {formatPct(r.partial_recovery_rate)} · no recovery{' '}
               {formatPct(r.no_recovery_rate)} (pipeline cohort)

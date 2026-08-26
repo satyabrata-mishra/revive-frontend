@@ -188,16 +188,14 @@ export function ReviewPage() {
             statusOptions={(queue.data?.items || []).map((i) => i.current_state)}
           />
         </div>
-        {flash && (
-          <p style={{ color: 'var(--accent)', marginBottom: '0.75rem' }}>{flash}</p>
-        )}
+        {flash && <p className="flash-msg">{flash}</p>}
         {queue.loading && <Loading />}
         {queue.error && <ErrorState message={queue.error} />}
         {queue.data?.items.length === 0 && (
-          <p style={{ color: 'var(--muted)' }}>No pending review items.</p>
+          <p className="empty-hint">No pending review items.</p>
         )}
         {queue.data && queue.data.items.length > 0 && items.length === 0 && (
-          <p style={{ color: 'var(--muted)' }}>
+          <p className="empty-hint">
             No items match this {search.trim() ? 'search / ' : ''}status filter.
           </p>
         )}
@@ -206,13 +204,7 @@ export function ReviewPage() {
           const open = expanded === item.case_id
           return (
             <div key={item.case_id} className="review-card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                }}
-              >
+              <div className="split-row">
                 <div>
                   <Link className="row-link" to={`/cases/${item.case_id}`}>
                     {item.customer_name || item.case_id}
@@ -220,12 +212,12 @@ export function ReviewPage() {
                   <div className="case-meta" style={{ marginTop: '0.25rem' }}>
                     <span>{item.case_id}</span>
                     <span>·</span>
-                    <span>{formatINR(item.outstanding_amount)}</span>
+                    <span className="financial-figure">{formatINR(item.outstanding_amount)}</span>
                     <span>·</span>
                     <span>{formatCause(item.root_cause)}</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'start' }}>
+                <div className="inline-actions" style={{ alignItems: 'start' }}>
                   <StatusBadge status={item.current_state} />
                   <Badge tone="warn">{item.review_status}</Badge>
                 </div>

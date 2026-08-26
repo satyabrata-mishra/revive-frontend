@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { casesApi } from '../api'
 import { StatusBadge } from '../components/StatusBadge'
 import { StatusSortControls } from '../components/StatusSortControls'
-import { Badge, ErrorState, Loading, Section } from '../components/ui'
+import { ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { formatAction, formatCause, formatINR } from '../utils/format'
@@ -119,7 +119,7 @@ export function CasesPage() {
                     <th>Case ID</th>
                     <th>Customer</th>
                     <th>Invoice</th>
-                    <th>Amount</th>
+                    <th className="num">Amount</th>
                     <th>Priority</th>
                     <th>Root cause</th>
                     <th>Recommended</th>
@@ -136,12 +136,10 @@ export function CasesPage() {
                       </td>
                       <td>{c.customer_name || c.customer_id || '—'}</td>
                       <td>{c.invoice_id || '—'}</td>
-                      <td>{formatINR(c.outstanding_amount)}</td>
+                      <td className="num">{formatINR(c.outstanding_amount)}</td>
                       <td>
                         {c.priority_level ? (
-                          <Badge tone={c.priority_level === 'P1' ? 'bad' : 'info'}>
-                            {c.priority_level}
-                          </Badge>
+                          <StatusBadge status={c.priority_level} />
                         ) : (
                           '—'
                         )}
@@ -161,7 +159,7 @@ export function CasesPage() {
                 Showing {list.data.offset + 1}–
                 {list.data.offset + list.data.items.length} of {list.data.total}
               </span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="pager-actions">
                 <button
                   type="button"
                   disabled={list.data.offset <= 0}
