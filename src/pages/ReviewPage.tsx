@@ -7,6 +7,7 @@ import { StatusSortControls } from '../components/StatusSortControls'
 import { Badge, ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { formatAction, formatCause, formatINR } from '../utils/format'
+import { policyStageLabel } from '../utils/lifecycle'
 import {
   filterByStatus,
   sortByStatus,
@@ -22,18 +23,18 @@ function escalationCopy(item: {
   const decision = item.policy_decision || ''
   if (decision === 'HUMAN_REVIEW') {
     return {
-      title: 'AUTOMATION HELD — HUMAN REVIEW',
+      title: 'Human approval required',
       why:
         item.reason ||
         'Policy requires human judgment before any autonomous customer action.',
-      humanAction: 'Review evidence, then Approve, Reject, or Escalate.',
+      humanAction: 'Authorize this specific action only if the evidence is sufficient.',
     }
   }
   if (decision === 'BLOCKED') {
     return {
-      title: 'AUTOMATION BLOCKED',
+      title: 'Automation blocked',
       why: item.reason || 'A hard policy rule blocked autonomous execution.',
-      humanAction: 'Contact account manager or resolve the blocking condition.',
+      humanAction: 'Resolve the blocking condition or escalate to account management.',
     }
   }
   if (
@@ -42,13 +43,13 @@ function escalationCopy(item: {
     )
   ) {
     return {
-      title: 'ROUTED TO HUMAN',
-      why: item.reason || 'Recommended path is a human/conservative gate, not auto-recovery.',
-      humanAction: 'Take over the customer conversation manually.',
+      title: 'Routed for human decision',
+      why: item.reason || 'Recommended path is a human gate, not auto-recovery.',
+      humanAction: 'Review the recommendation and decide whether to authorize.',
     }
   }
   return {
-    title: 'NEEDS ATTENTION',
+    title: 'Needs attention',
     why: item.reason || 'Case is in the escalated queue.',
     humanAction: 'Inspect case detail before approving any action.',
   }
@@ -146,8 +147,7 @@ export function ReviewPage() {
         <div>
           <h1>Human Review</h1>
           <p>
-            Autonomous when safe, human-controlled when necessary — approvals go through
-            the backend only.
+            Authorize a specific action with enough evidence — not “trust the AI.”
           </p>
         </div>
       </div>
@@ -202,6 +202,8 @@ export function ReviewPage() {
         {items.map((item) => {
           const copy = escalationCopy(item)
           const open = expanded === item.case_id
+          const authorizeAction =
+            item.requested_action || item.authorized_action
           return (
             <div key={item.case_id} className="review-card">
               <div className="split-row">
@@ -212,7 +214,9 @@ export function ReviewPage() {
                   <div className="case-meta" style={{ marginTop: '0.25rem' }}>
                     <span>{item.case_id}</span>
                     <span>·</span>
-                    <span className="financial-figure">{formatINR(item.outstanding_amount)}</span>
+                    <span className="financial-figure">
+                      {formatINR(item.outstanding_amount)} at stake
+                    </span>
                     <span>·</span>
                     <span>{formatCause(item.root_cause)}</span>
                   </div>
@@ -223,17 +227,32 @@ export function ReviewPage() {
                 </div>
               </div>
 
-              <div style={{ fontSize: '0.9rem' }}>
-                <strong>{copy.title}</strong>
-                <div style={{ color: 'var(--muted)', marginTop: '0.25rem' }}>
-                  Reason: {copy.why}
+              <div className="review-evidence-grid">
+                <div>
+                  <div className="decision-stage-k">Why</div>
+                  <strong>{copy.title}</strong>
+                  <p>{copy.why}</p>
                 </div>
-                <div style={{ marginTop: '0.35rem' }}>
-                  Recommended:{' '}
-                  <strong>
-                    {formatAction(item.authorized_action || item.requested_action)}
+                <div>
+                  <div className="decision-stage-k">Recommendation</div>
+                  <strong>{formatAction(authorizeAction)}</strong>
+                  <p>
+                    {item.policy_decision
+                      ? policyStageLabel(item.policy_decision)
+                      : 'Policy gate applied'}
+                  </p>
+                </div>
+                <div>
+                  <div className="decision-stage-k">Expected impact</div>
+                  <strong className="financial-figure">
+                    {formatINR(item.outstanding_amount)}
                   </strong>
-                  {item.policy_decision ? ` · Policy ${item.policy_decision}` : ''}
+                  <p>Outstanding balance under review</p>
+                </div>
+                <div>
+                  <div className="decision-stage-k">You are authorizing</div>
+                  <strong>{formatAction(authorizeAction)}</strong>
+                  <p>{copy.humanAction}</p>
                 </div>
               </div>
 
@@ -253,7 +272,7 @@ export function ReviewPage() {
                   type="button"
                   onClick={() => setExpanded(open ? null : item.case_id)}
                 >
-                  {open ? 'Hide why' : 'Why escalated?'}
+                  {open ? 'Hide detail' : 'More evidence'}
                 </button>
                 <button
                   type="button"

@@ -7,6 +7,7 @@ import { ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { formatAction, formatCause, formatINR } from '../utils/format'
+import { nextWorkAction } from '../utils/lifecycle'
 import { sortByStatus, type StatusSortMode } from '../utils/statusSort'
 
 const PAGE_SIZE = 25
@@ -64,7 +65,7 @@ export function CasesPage() {
       <div className="page-head">
         <div>
           <h1>Cases</h1>
-          <p>Operational queue across the Detect → Monitor pipeline.</p>
+          <p>Recovery work queue — prioritize by money at stake and next action.</p>
         </div>
       </div>
 
@@ -119,15 +120,18 @@ export function CasesPage() {
                     <th>Case ID</th>
                     <th>Customer</th>
                     <th>Invoice</th>
-                    <th className="num">Amount</th>
+                    <th className="num">Outstanding</th>
                     <th>Priority</th>
                     <th>Root cause</th>
-                    <th>Recommended</th>
+                    <th>AI recommends</th>
+                    <th>Next action</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((c) => (
+                  {rows.map((c) => {
+                    const next = nextWorkAction(c)
+                    return (
                     <tr key={c.case_id}>
                       <td>
                         <Link className="row-link" to={`/cases/${c.case_id}`}>
@@ -147,10 +151,14 @@ export function CasesPage() {
                       <td>{formatCause(c.root_cause)}</td>
                       <td>{formatAction(c.recommended_action || c.authorized_action)}</td>
                       <td>
+                        <span className={`next-action kind-${next.kind}`}>{next.label}</span>
+                      </td>
+                      <td>
                         <StatusBadge status={c.current_state} />
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

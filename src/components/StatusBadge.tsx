@@ -1,4 +1,5 @@
 import { Badge } from '../components/ui'
+import { formatStatusLabel } from '../utils/lifecycle'
 
 const TONE: Record<string, 'ok' | 'warn' | 'bad' | 'info' | 'neutral'> = {
   CLOSED: 'ok',
@@ -24,6 +25,7 @@ const TONE: Record<string, 'ok' | 'warn' | 'bad' | 'info' | 'neutral'> = {
   P2: 'warn',
   P3: 'info',
   P4: 'neutral',
+  MODIFIED: 'warn',
 }
 
 export function statusTone(status: string | null | undefined) {
@@ -31,7 +33,19 @@ export function statusTone(status: string | null | undefined) {
   return TONE[status] || 'neutral'
 }
 
-export function StatusBadge({ status }: { status: string | null | undefined }) {
+export function StatusBadge({
+  status,
+  raw = false,
+}: {
+  status: string | null | undefined
+  /** When true, show the backend enum instead of the human label. */
+  raw?: boolean
+}) {
   if (!status) return <Badge>—</Badge>
-  return <Badge tone={statusTone(status)}>{status}</Badge>
+  const label = raw || /^P[1-4]$/.test(status) ? status : formatStatusLabel(status)
+  return (
+    <Badge tone={statusTone(status)} title={status}>
+      {label}
+    </Badge>
+  )
 }

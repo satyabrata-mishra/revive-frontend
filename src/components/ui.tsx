@@ -33,11 +33,17 @@ export function ErrorState({ message }: { message: string }) {
 export function Badge({
   children,
   tone = 'neutral',
+  title,
 }: {
   children: React.ReactNode
   tone?: 'neutral' | 'ok' | 'warn' | 'bad' | 'info'
+  title?: string
 }) {
-  return <span className={`badge tone-${tone}`}>{children}</span>
+  return (
+    <span className={`badge tone-${tone}`} title={title}>
+      {children}
+    </span>
+  )
 }
 
 export function MetricCard({

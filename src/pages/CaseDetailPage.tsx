@@ -13,6 +13,7 @@ import {
   formatPct,
   formatTs,
 } from '../utils/format'
+import { isHumanGateAction, policyStageLabel } from '../utils/lifecycle'
 
 function nest(obj: Record<string, unknown> | undefined, ...keys: string[]): unknown {
   let cur: unknown = obj
@@ -304,6 +305,59 @@ export function CaseDetailPage() {
     str(optDecision.selected_action) ||
     str(strategy?.primary_action) ||
     executableAction
+  const strategyExpected = num(strategy?.expected_recovery) ?? num(financial?.expected_recovery)
+  const aiRecommendedAction =
+    str(optDecision.selected_action) || str(strategy?.primary_action) || null
+  const whatIfBest = whatIf.data?.actions
+    ?.slice()
+    .sort((a, b) => (b.expected_recovery || 0) - (a.expected_recovery || 0))[0]
+  const whatIfBestAllowed = whatIf.data?.actions
+    ?.filter((a) => a.allowed)
+    .slice()
+    .sort((a, b) => (b.expected_recovery || 0) - (a.expected_recovery || 0))[0]
+  const policyReasons = policy.data?.policy_reasons || []
+  const decisionHeadline = (() => {
+    if (caseClosed) return 'Case closed — recovery loop finished'
+    if (policy.data?.requires_human_approval || policyDecision === 'HUMAN_REVIEW') {
+      return `Human approval required${aiRecommendedAction ? ` for ${formatAction(aiRecommendedAction)}` : ''}`
+    }
+    if (caseEscalated) return 'Escalated — waiting on human decision'
+    if (sameActionAlreadyDone && caseState === 'OUTCOME_MONITORING') {
+      return 'Action executed — monitoring outcome'
+    }
+    if (canExecute) return `Ready to execute ${formatAction(executableAction)}`
+    if (policyDecision === 'BLOCKED') return 'Policy blocked autonomous action'
+    return 'Review the decision chain before acting'
+  })()
+  const decisionWhy = (() => {
+    const bits: string[] = []
+    if (diagnosisRoot) {
+      bits.push(
+        `${formatCause(diagnosisRoot)} detected` +
+          (diagnosisConfidence != null
+            ? ` with ${formatPct(diagnosisConfidence)} diagnostic confidence`
+            : ''),
+      )
+    }
+    if (aiRecommendedAction && strategyExpected != null) {
+      bits.push(
+        `${formatAction(aiRecommendedAction)} has the highest expected recovery (${formatINRExact(strategyExpected)}) among strategy candidates`,
+      )
+    }
+    if (policy.data?.requires_human_approval || policyDecision === 'HUMAN_REVIEW') {
+      bits.push(
+        `Policy: ${
+          policyReasons[0] ||
+          reasonText ||
+          'Outstanding balance or policy rules require human authorization before execution'
+        }`,
+      )
+    } else if (policyDecision === 'APPROVED' || policyDecision === 'MODIFIED') {
+      bits.push(`Policy: ${policyStageLabel(policyDecision)}`)
+    }
+    if (!bits.length) return reasonText
+    return bits.join('. ') + '.'
+  })()
   const monitorOutcome =
     liveResult?.monitoring_outcome || str(outcomeInner.type) || undefined
   const nextAction =
@@ -356,6 +410,12 @@ export function CaseDetailPage() {
             </div>
           </div>
           <div className="metric-card">
+            <div className="metric-label">Expected recovery</div>
+            <div className="metric-value">
+              {formatINRExact(strategyExpected ?? caseForecast.data?.expected_recovery)}
+            </div>
+          </div>
+          <div className="metric-card">
             <div className="metric-label">Risk / Recovery P</div>
             <div className="metric-value" style={{ fontSize: '1.15rem' }}>
               {formatPct(num(risk?.risk_score))} / {formatPct(num(risk?.recovery_probability))}
@@ -369,6 +429,97 @@ export function CaseDetailPage() {
           </div>
         </div>
       </div>
+
+      <Section title="Revive Decision">
+        <div className={`decision-summary decision-banner ${bannerTone}`}>
+          <div className="decision-summary-headline">{decisionHeadline}</div>
+          <p className="decision-summary-why">{decisionWhy}</p>
+          <div className="decision-lifecycle">
+            <div className="decision-stage">
+              <span className="decision-stage-k">1 · AI recommendation</span>
+              <strong>{formatAction(aiRecommendedAction || selectedAction)}</strong>
+              <span className="decision-stage-v">
+                {formatINRExact(strategyExpected)} expected
+              </span>
+            </div>
+            <div className="decision-stage-arrow" aria-hidden="true">
+              →
+            </div>
+            <div className="decision-stage">
+              <span className="decision-stage-k">2 · Policy</span>
+              <strong>{policyStageLabel(policyDecision)}</strong>
+              <span className="decision-stage-v">
+                Requested {formatAction(policy.data?.requested_action || aiRecommendedAction)}
+              </span>
+            </div>
+            <div className="decision-stage-arrow" aria-hidden="true">
+              →
+            </div>
+            <div className="decision-stage">
+              <span className="decision-stage-k">3 · Authorization</span>
+              <strong>
+                {policy.data?.requires_human_approval || policyDecision === 'HUMAN_REVIEW'
+                  ? 'Pending human'
+                  : formatAction(policy.data?.authorized_action || executableAction)}
+              </strong>
+              <span className="decision-stage-v">
+                {policy.data?.review_status
+                  ? `Review: ${policy.data.review_status}`
+                  : canExecute
+                    ? 'Ready to execute'
+                    : caseEscalated
+                      ? 'Escalated'
+                      : '—'}
+              </span>
+            </div>
+            <div className="decision-stage-arrow" aria-hidden="true">
+              →
+            </div>
+            <div className="decision-stage">
+              <span className="decision-stage-k">4 · Outcome</span>
+              <strong>
+                {caseClosed
+                  ? 'Closed'
+                  : monitorOutcome
+                    ? formatAction(monitorOutcome)
+                    : caseState === 'OUTCOME_MONITORING'
+                      ? 'Monitoring'
+                      : 'Not started'}
+              </strong>
+              <span className="decision-stage-v">
+                Recovered {formatINRExact(amountRecovered)}
+              </span>
+            </div>
+          </div>
+          <div className="decision-summary-actions">
+            {(policy.data?.requires_human_approval ||
+              policyDecision === 'HUMAN_REVIEW' ||
+              caseEscalated) && (
+              <Link className="primary button-link" to="/review">
+                Open Human Review
+              </Link>
+            )}
+            {canExecute && (
+              <a className="primary button-link" href="#execute-action">
+                Jump to Execute
+              </a>
+            )}
+            <Link className="button-link" to="/audit">
+              View audit
+            </Link>
+          </div>
+          <dl className="kv decision-summary-kv">
+            <dt>Outstanding</dt>
+            <dd>{formatINRExact(num(invoice.outstanding_amount))}</dd>
+            <dt>Recovery probability</dt>
+            <dd>{formatPct(num(risk?.recovery_probability))}</dd>
+            <dt>Diagnosis confidence</dt>
+            <dd>{formatPct(diagnosisConfidence)}</dd>
+            <dt>Root cause</dt>
+            <dd>{formatCause(diagnosisRoot)}</dd>
+          </dl>
+        </div>
+      </Section>
 
       <div className="grid-2">
         <Section title="Why is this case risky?">
@@ -389,7 +540,7 @@ export function CaseDetailPage() {
             <dl className="kv">
               <dt>Diagnosis</dt>
               <dd>{formatCause(diagnosisRoot)}</dd>
-              <dt>Confidence</dt>
+              <dt>Diagnosis confidence</dt>
               <dd>
                 {formatPct(diagnosisConfidence)}{' '}
                 {diagnosisBand && <Badge tone="info">{diagnosisBand}</Badge>}
@@ -419,14 +570,17 @@ export function CaseDetailPage() {
         </Section>
       </div>
 
-      <Section title="Revive's Recommendation">
+      <Section title="AI Recommendation">
         <>
+          <p className="muted-note">
+            What Revive would choose for expected recovery — before policy and human gates.
+          </p>
           <dl className="kv">
             <dt>Recommended action</dt>
-            <dd>{formatAction(selectedAction)}</dd>
+            <dd>{formatAction(aiRecommendedAction || selectedAction)}</dd>
             <dt>Expected recovery</dt>
-            <dd>{formatINRExact(num(strategy?.expected_recovery))}</dd>
-            <dt>Confidence</dt>
+            <dd>{formatINRExact(strategyExpected)}</dd>
+            <dt>Strategy confidence</dt>
             <dd>{str(optDecision.selected_confidence) || '—'}</dd>
             <dt>Customer-aware</dt>
             <dd>
@@ -476,7 +630,7 @@ export function CaseDetailPage() {
                       <span>
                         {formatAction(action)}{' '}
                         {!allowed && <Badge tone="bad">blocked</Badge>}
-                        {action === selectedAction && (
+                        {action === (aiRecommendedAction || selectedAction) && (
                           <Badge tone="ok">recommended</Badge>
                         )}
                       </span>
@@ -496,17 +650,40 @@ export function CaseDetailPage() {
           {caseForecast.data && (
             <>
               <p className="muted-note">{caseForecast.data.disclaimer}</p>
+              <div className="forecast-meter">
+                <div className="forecast-meter-top">
+                  <span>{formatINRExact(caseForecast.data.current_outstanding)}</span>
+                  <span className="text-muted">outstanding</span>
+                </div>
+                <div
+                  className="forecast-meter-bar"
+                  role="meter"
+                  aria-valuenow={Math.round(
+                    (caseForecast.data.recovery_probability || 0) * 100,
+                  )}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <span
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(0, (caseForecast.data.recovery_probability || 0) * 100),
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <div className="forecast-meter-meta">
+                  {formatPct(caseForecast.data.recovery_probability)} recovery probability
+                </div>
+              </div>
               <dl className="kv">
-                <dt>Outstanding</dt>
-                <dd>{formatINRExact(caseForecast.data.current_outstanding)}</dd>
                 <dt>Expected recovery</dt>
                 <dd>{formatINRExact(caseForecast.data.expected_recovery)}</dd>
                 <dt>Expected date</dt>
                 <dd>{caseForecast.data.expected_recovery_date || '—'}</dd>
                 <dt>Expected remaining</dt>
                 <dd>{formatINRExact(caseForecast.data.expected_remaining_balance)}</dd>
-                <dt>Recovery P</dt>
-                <dd>{formatPct(caseForecast.data.recovery_probability)}</dd>
               </dl>
             </>
           )}
@@ -517,12 +694,38 @@ export function CaseDetailPage() {
           {whatIf.data && (
             <>
               <p className="muted-note">{whatIf.data.disclaimer}</p>
+              {whatIfBest &&
+                whatIfBestAllowed &&
+                whatIfBest.action !== whatIfBestAllowed.action && (
+                  <div className="whatif-explain">
+                    <div>
+                      <span className="decision-stage-k">Best theoretical</span>
+                      <strong>
+                        {formatAction(whatIfBest.action)} ·{' '}
+                        {formatINRExact(whatIfBest.expected_recovery)}
+                      </strong>
+                      {!whatIfBest.allowed && <Badge tone="bad">policy blocked</Badge>}
+                    </div>
+                    <div>
+                      <span className="decision-stage-k">Best allowed path</span>
+                      <strong>
+                        {formatAction(whatIfBestAllowed.action)} ·{' '}
+                        {formatINRExact(whatIfBestAllowed.expected_recovery)}
+                      </strong>
+                    </div>
+                    <p className="muted-note" style={{ margin: 0 }}>
+                      Highest expected recovery is not always authorized — policy and human
+                      gates can force a safer path.
+                    </p>
+                  </div>
+                )}
               <div className="table-wrap">
                 <table className="data">
                   <thead>
                     <tr>
                       <th>Action</th>
-                      <th>Expected</th>
+                      <th className="num">Expected</th>
+                      <th>Policy</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -536,10 +739,19 @@ export function CaseDetailPage() {
                           {row.is_recommended && (
                             <Badge tone="ok">recommended</Badge>
                           )}
-                          {!row.allowed && <Badge tone="bad">blocked</Badge>}
+                          {isHumanGateAction(row.action) && (
+                            <Badge tone="warn">human</Badge>
+                          )}
+                        </td>
+                        <td className="num">
+                          <strong>{formatINRExact(row.expected_recovery)}</strong>
                         </td>
                         <td>
-                          <strong>{formatINRExact(row.expected_recovery)}</strong>
+                          {row.allowed ? (
+                            <Badge tone="ok">allowed</Badge>
+                          ) : (
+                            <Badge tone="bad">blocked</Badge>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -548,7 +760,7 @@ export function CaseDetailPage() {
               </div>
               {whatIf.data.recommended_action && (
                 <div className="decision-banner ok" style={{ marginTop: '0.85rem' }}>
-                  Revive recommends: {formatAction(whatIf.data.recommended_action)}
+                  Current recommended path: {formatAction(whatIf.data.recommended_action)}
                 </div>
               )}
               <p style={{ marginTop: '0.5rem', color: 'var(--muted)', fontSize: '0.85rem' }}>
@@ -559,34 +771,26 @@ export function CaseDetailPage() {
         </Section>
       </div>
 
-      <Section title="Policy Validation">
+      <Section title="Policy Decision">
         {policy.loading && <Loading />}
         {policy.data && (
           <>
             <div className={`decision-banner ${bannerTone}`}>
-              {policy.data.decision === 'APPROVED' && 'APPROVED'}
-              {policy.data.decision === 'HUMAN_REVIEW' && 'HUMAN REVIEW REQUIRED'}
-              {policy.data.decision === 'BLOCKED' && 'BLOCKED'}
-              {policy.data.decision === 'MODIFIED' && 'MODIFIED'}
-              {!['APPROVED', 'HUMAN_REVIEW', 'BLOCKED', 'MODIFIED'].includes(
-                policy.data.decision || '',
-              ) &&
-                (policy.data.decision || 'UNKNOWN')}
+              {policyStageLabel(policy.data.decision)}
               {policy.data.policy_version
                 ? ` · policy ${policy.data.policy_version}`
                 : ''}
             </div>
             <dl className="kv">
-              <dt>Requested</dt>
+              <dt>AI requested</dt>
               <dd>{formatAction(policy.data.requested_action)}</dd>
-              <dt>Authorized</dt>
+              <dt>Policy authorized</dt>
               <dd>{formatAction(policy.data.authorized_action)}</dd>
-              {policy.data.review_status && (
-                <>
-                  <dt>Human review</dt>
-                  <dd>{policy.data.review_status}</dd>
-                </>
-              )}
+              <dt>Human approval</dt>
+              <dd>
+                {policy.data.requires_human_approval ? 'Required' : 'Not required'}
+                {policy.data.review_status ? ` · ${policy.data.review_status}` : ''}
+              </dd>
               {policy.data.reviewed_at && (
                 <>
                   <dt>Reviewed at</dt>
@@ -594,6 +798,13 @@ export function CaseDetailPage() {
                 </>
               )}
             </dl>
+            {policyReasons.length > 0 && (
+              <ul className="evidence-list" style={{ marginTop: '0.75rem' }}>
+                {policyReasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            )}
             {policy.data.reviewer_note && (
               <div className="reviewer-note" style={{ marginTop: '0.85rem' }}>
                 <div className="metric-label">Reviewer note</div>
@@ -619,9 +830,9 @@ export function CaseDetailPage() {
       </Section>
 
       <Section title="Execute Action">
-        <div className="execute-panel">
+        <div id="execute-action" className="execute-panel">
           <div>
-            <div className="metric-label">Authorized action</div>
+            <div className="metric-label">Authorized to execute</div>
             <div className="metric-value" style={{ fontSize: '1.2rem' }}>
               {formatAction(executableAction)}
             </div>

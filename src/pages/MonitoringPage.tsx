@@ -5,7 +5,8 @@ import { StatusBadge } from '../components/StatusBadge'
 import { StatusSortControls } from '../components/StatusSortControls'
 import { ErrorState, Loading, MetricCard, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
-import { formatAction, formatINR } from '../utils/format'
+import { formatINR } from '../utils/format'
+import { nextWorkAction } from '../utils/lifecycle'
 import {
   filterByStatus,
   sortByStatus,
@@ -56,12 +57,18 @@ export function MonitoringPage() {
   if (all.error) return <ErrorState message={all.error} />
 
   const items = all.data?.items || []
-  const recovered = items.filter((c) => (c.amount_recovered || 0) > 0)
-  const partial = items.filter(
-    (c) =>
-      (c.amount_recovered || 0) > 0 &&
-      (c.outstanding_amount || 0) > 0.01 &&
-      c.current_state !== 'CLOSED',
+  const recoveredAmt = items.reduce((s, c) => s + (c.amount_recovered || 0), 0)
+  const escalatedAmt = (escalated.data?.items || []).reduce(
+    (s, c) => s + (c.outstanding_amount || 0),
+    0,
+  )
+  const monitoringAmt = (monitoring.data?.items || []).reduce(
+    (s, c) => s + (c.outstanding_amount || 0),
+    0,
+  )
+  const nextAmt = (next.data?.items || []).reduce(
+    (s, c) => s + (c.outstanding_amount || 0),
+    0,
   )
 
   return (
@@ -69,30 +76,66 @@ export function MonitoringPage() {
       <div className="page-head">
         <div>
           <h1>Recovery Monitoring</h1>
-          <p>
-            Live operational statuses from unified case state — CLOSED, partial,
-            monitoring, escalated.
-          </p>
+          <p>What is happening to your money right now — actions, outcomes, and exceptions.</p>
         </div>
       </div>
 
-      <div className="metric-grid">
-        <MetricCard label="Closed" value={String(closed.data?.total ?? '—')} />
-        <MetricCard
-          label="Next action"
-          value={String(next.data?.total ?? '—')}
-        />
-        <MetricCard
-          label="Outcome monitoring"
-          value={String(monitoring.data?.total ?? '—')}
-        />
-        <MetricCard
-          label="Escalated"
-          value={String(escalated.data?.total ?? '—')}
-        />
-        <MetricCard label="With recovery $" value={String(recovered.length)} />
-        <MetricCard label="Partial (sample)" value={String(partial.length)} />
-      </div>
+      <Section title="Operations snapshot">
+        <div className="metric-grid">
+          <MetricCard
+            label="Recovered (sample)"
+            value={formatINR(recoveredAmt)}
+            sub="Across loaded cases"
+          />
+          <MetricCard
+            label="Awaiting human"
+            value={formatINR(escalatedAmt)}
+            sub={`${escalated.data?.total ?? '—'} escalated cases`}
+          />
+          <MetricCard
+            label="Awaiting outcome"
+            value={formatINR(monitoringAmt)}
+            sub={`${monitoring.data?.total ?? '—'} in monitoring`}
+          />
+          <MetricCard
+            label="Next action ready"
+            value={formatINR(nextAmt)}
+            sub={`${next.data?.total ?? '—'} cases`}
+          />
+        </div>
+
+        <div className="monitor-pipeline" aria-label="Recovery pipeline">
+          <div className="monitor-pipe-step">
+            <strong>{escalated.data?.total ?? '—'}</strong>
+            <span>Escalated</span>
+            <em>{formatINR(escalatedAmt)}</em>
+          </div>
+          <span className="monitor-pipe-arrow" aria-hidden="true">
+            →
+          </span>
+          <div className="monitor-pipe-step">
+            <strong>{next.data?.total ?? '—'}</strong>
+            <span>Next action</span>
+            <em>{formatINR(nextAmt)}</em>
+          </div>
+          <span className="monitor-pipe-arrow" aria-hidden="true">
+            →
+          </span>
+          <div className="monitor-pipe-step">
+            <strong>{monitoring.data?.total ?? '—'}</strong>
+            <span>Outcome monitoring</span>
+            <em>{formatINR(monitoringAmt)}</em>
+          </div>
+          <span className="monitor-pipe-arrow" aria-hidden="true">
+            →
+          </span>
+          <div className="monitor-pipe-step">
+            <strong>{closed.data?.total ?? '—'}</strong>
+            <span>Closed</span>
+            <em>Recovered loop</em>
+          </div>
+        </div>
+      </Section>
 
       <Section title="Case Recovery Status">
         <div className="filters">
@@ -113,35 +156,37 @@ export function MonitoringPage() {
                 <th>Status</th>
                 <th className="num">Recovered</th>
                 <th className="num">Outstanding</th>
-                <th>Action</th>
+                <th>Next action</th>
               </tr>
             </thead>
             <tbody>
-              {display.map((c) => (
-                <tr key={c.case_id}>
-                  <td>
-                    <Link className="row-link" to={`/cases/${c.case_id}`}>
-                      {c.case_id}
-                    </Link>
-                  </td>
-                  <td>{c.customer_name || c.customer_id || '—'}</td>
-                  <td>
-                    <StatusBadge status={c.current_state} />
-                  </td>
-                  <td className="num">{formatINR(c.amount_recovered)}</td>
-                  <td className="num">{formatINR(c.outstanding_amount)}</td>
-                  <td>{formatAction(c.authorized_action || c.recommended_action)}</td>
-                </tr>
-              ))}
+              {display.map((c) => {
+                const next = nextWorkAction(c)
+                return (
+                  <tr key={c.case_id}>
+                    <td>
+                      <Link className="row-link" to={`/cases/${c.case_id}`}>
+                        {c.case_id}
+                      </Link>
+                    </td>
+                    <td>{c.customer_name || c.customer_id || '—'}</td>
+                    <td>
+                      <StatusBadge status={c.current_state} />
+                    </td>
+                    <td className="num">{formatINR(c.amount_recovered)}</td>
+                    <td className="num">{formatINR(c.outstanding_amount)}</td>
+                    <td>
+                      <span className={`next-action kind-${next.kind}`}>{next.label}</span>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
         {display.length === 0 && (
           <p className="empty-hint">No cases match this status filter.</p>
         )}
-        <p className="empty-hint">
-          Status badges come from Day-12 unified case state via the API — not recomputed in React.
-        </p>
       </Section>
     </div>
   )

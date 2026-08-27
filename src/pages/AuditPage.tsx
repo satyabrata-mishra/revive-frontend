@@ -7,6 +7,7 @@ import { Badge, ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { formatAction, formatCause, formatINR, formatINRExact, formatTs } from '../utils/format'
+import { policyStageLabel } from '../utils/lifecycle'
 import {
   sortByStatus,
   type StatusSortMode,
@@ -21,6 +22,8 @@ export function AuditPage() {
   const [sortMode, setSortMode] = useState<StatusSortMode>('severity')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [offset, setOffset] = useState(0)
+
+  const [expandedEvent, setExpandedEvent] = useState<number | null>(0)
 
   const cases = useAsync(
     () =>
@@ -58,6 +61,10 @@ export function AuditPage() {
     )
     return list
   }, [timeline.data])
+
+  useEffect(() => {
+    setExpandedEvent(0)
+  }, [selected])
 
   useEffect(() => {
     setOffset(0)
@@ -262,15 +269,13 @@ export function AuditPage() {
               <dd>{formatINRExact(summary.data.amount_recovered)}</dd>
               <dt>Invoice status</dt>
               <dd>{summary.data.invoice_status || '—'}</dd>
-              <dt>Authorized action</dt>
-              <dd>
-                {formatAction(
-                  summary.data.authorized_action || summary.data.recommended_action,
-                )}
-              </dd>
+              <dt>AI recommended</dt>
+              <dd>{formatAction(summary.data.recommended_action)}</dd>
+              <dt>Policy authorized</dt>
+              <dd>{formatAction(summary.data.authorized_action)}</dd>
               <dt>Policy decision</dt>
               <dd>
-                {policy.data?.decision || '—'}
+                {policyStageLabel(policy.data?.decision)}
                 {policy.data?.policy_version ? ` · ${policy.data.policy_version}` : ''}
               </dd>
               <dt>Customer aware</dt>
@@ -282,6 +287,41 @@ export function AuditPage() {
                     : 'No'}
               </dd>
             </dl>
+
+            {(summary.data.recommended_action ||
+              summary.data.authorized_action ||
+              policy.data?.decision) && (
+              <div className="decision-diff" aria-label="Decision diff">
+                <div className="decision-diff-step">
+                  <span className="decision-stage-k">Revive recommendation</span>
+                  <strong>{formatAction(summary.data.recommended_action)}</strong>
+                </div>
+                <div className="decision-diff-arrow" aria-hidden="true">
+                  ↓ policy
+                </div>
+                <div className="decision-diff-step">
+                  <span className="decision-stage-k">Policy decision</span>
+                  <strong>{policyStageLabel(policy.data?.decision)}</strong>
+                  <span className="muted-note">
+                    {(policy.data?.policy_reasons || [])[0] ||
+                      (policy.data?.requires_human_approval
+                        ? 'Human approval required'
+                        : 'Evaluated against policy rules')}
+                  </span>
+                </div>
+                <div className="decision-diff-arrow" aria-hidden="true">
+                  ↓
+                </div>
+                <div className="decision-diff-step">
+                  <span className="decision-stage-k">Authorized / current path</span>
+                  <strong>
+                    {formatAction(
+                      summary.data.authorized_action || summary.data.recommended_action,
+                    )}
+                  </strong>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -290,21 +330,61 @@ export function AuditPage() {
         {timelineEvents.length ? (
           <div className="timeline-scroll">
             <ul className="timeline">
-              {timelineEvents.map((e, i) => (
-                <li key={`${e.event}-${i}`}>
-                  <span className="ts">{formatTs(e.timestamp)}</span>
-                  <span>
-                    <strong>{e.event}</strong>
-                    <span style={{ color: 'var(--muted)' }}> · actor REVIVE</span>
-                    {e.detail != null && e.detail !== '' ? (
-                      <span style={{ color: 'var(--muted)' }}>
-                        {' '}
-                        · {String(e.detail)}
+              {timelineEvents.map((e, i) => {
+                const open = expandedEvent === i
+                const detailText =
+                  e.detail != null && e.detail !== '' ? String(e.detail) : null
+                return (
+                  <li key={`${e.event}-${i}`}>
+                    <button
+                      type="button"
+                      className="timeline-event-btn"
+                      onClick={() => setExpandedEvent(open ? null : i)}
+                      aria-expanded={open}
+                    >
+                      <span className="ts">{formatTs(e.timestamp)}</span>
+                      <span className="timeline-event-body">
+                        <strong>{e.event.replace(/_/g, ' ')}</strong>
+                        {!open && detailText ? (
+                          <span style={{ color: 'var(--muted)' }}>
+                            {' '}
+                            · {detailText.slice(0, 80)}
+                            {detailText.length > 80 ? '…' : ''}
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
+                    </button>
+                    {open && (
+                      <div className="timeline-event-detail">
+                        <dl className="kv">
+                          <dt>Actor</dt>
+                          <dd>REVIVE</dd>
+                          <dt>Event</dt>
+                          <dd>{e.event}</dd>
+                          {e.case_id && (
+                            <>
+                              <dt>Case</dt>
+                              <dd>{e.case_id}</dd>
+                            </>
+                          )}
+                          {detailText && (
+                            <>
+                              <dt>Detail</dt>
+                              <dd style={{ whiteSpace: 'pre-wrap' }}>{detailText}</dd>
+                            </>
+                          )}
+                          {policy.data?.authorized_action && (
+                            <>
+                              <dt>Authorized action</dt>
+                              <dd>{formatAction(policy.data.authorized_action)}</dd>
+                            </>
+                          )}
+                        </dl>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ) : (

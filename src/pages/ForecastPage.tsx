@@ -35,21 +35,40 @@ export function ForecastPage() {
         <div>
           <h1>Recovery Forecast</h1>
           <p>
-            What is likely to happen next — and what changes if Revive acts.
-            All figures are <strong>estimates</strong>, not guarantees.
+            How much can Revive recover, and what should it do next? Figures are{' '}
+            <strong>estimates</strong>, not guarantees.
           </p>
         </div>
       </div>
 
       <p className="forecast-disclaimer">{f.disclaimer}</p>
 
-      <Section title="Revive Recovery Forecast">
-        <div className="metric-grid">
-          <MetricCard
-            label="Current AR at Risk"
-            value={formatINR(f.current_ar_at_risk)}
-            sub={`${f.open_cases} open receivables`}
-          />
+      <Section title="Recovery opportunity">
+        <div className="forecast-opportunity">
+          <div>
+            <div className="metric-label">At risk</div>
+            <div className="metric-value">{formatINR(f.current_ar_at_risk)}</div>
+            <div className="muted-note">{f.open_cases} open receivables</div>
+          </div>
+          <div>
+            <div className="metric-label">Expected recoverable (30-day)</div>
+            <div className="metric-value">{formatINR(f.expected_30_day_recovery)}</div>
+            <div className="muted-note">
+              {f.current_ar_at_risk > 0
+                ? `${Math.round((f.currently_actionable / f.current_ar_at_risk) * 100)}% of at-risk balance is currently actionable`
+                : 'Actionable share unavailable'}
+            </div>
+          </div>
+          <div className="forecast-opportunity-cta">
+            <Link to="/cases" className="primary button-link">
+              Review recovery opportunities →
+            </Link>
+            <Link to="/intelligence" className="button-link">
+              Ask Revive IQ
+            </Link>
+          </div>
+        </div>
+        <div className="metric-grid" style={{ marginTop: '1rem' }}>
           <MetricCard
             label="Currently Actionable"
             value={formatINR(f.currently_actionable)}
@@ -68,14 +87,24 @@ export function ForecastPage() {
           <MetricCard
             label="Expected 30-day"
             value={formatINR(f.expected_30_day_recovery)}
-            sub="Forecast"
+            sub={
+              Math.abs(f.expected_30_day_recovery - f.expected_14_day_recovery) < 1
+                ? 'No additional recovery expected after Day 14'
+                : 'Forecast'
+            }
           />
           <MetricCard
             label="Expected unrecovered"
             value={formatINR(f.expected_unrecovered)}
-            sub="Beyond 30-day horizon"
+            sub="Beyond recovery horizon"
           />
         </div>
+        {Math.abs(f.expected_30_day_recovery - f.expected_14_day_recovery) < 1 && (
+          <p className="muted-note" style={{ marginTop: '0.75rem' }}>
+            14-day and 30-day expected recovery match because the model does not project
+            additional recovery after Day 14 for this portfolio.
+          </p>
+        )}
       </Section>
 
       <div className="grid-2">
@@ -243,16 +272,23 @@ export function ForecastPage() {
       </div>
 
       <Section
-        title="Try a case what-if"
-        right={<Badge tone="info">Demo path</Badge>}
+        title="Act on the forecast"
+        right={<Badge tone="info">Work queue</Badge>}
       >
         <p style={{ color: 'var(--muted)', marginBottom: '0.75rem' }}>
-          Open a high-value Opportunity case, compare actions, and see Revive&apos;s
-          policy-allowed recommendation.
+          Open high-value cases, compare what-if actions, and approve policy-gated work.
         </p>
-        <Link to="/cases" className="row-link">
-          Browse cases →
-        </Link>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link to="/cases" className="row-link">
+            Browse cases →
+          </Link>
+          <Link to="/review" className="row-link">
+            Human review →
+          </Link>
+          <Link to="/intelligence" className="row-link">
+            Ask Revive IQ →
+          </Link>
+        </div>
       </Section>
     </div>
   )
