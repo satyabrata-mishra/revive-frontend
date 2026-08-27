@@ -5,6 +5,7 @@ import { CaseDetailPage } from './pages/CaseDetailPage'
 import { CasesPage } from './pages/CasesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ForecastPage } from './pages/ForecastPage'
+import { IntelligencePage } from './pages/IntelligencePage'
 import { LandingPage } from './pages/LandingPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ReviewPage } from './pages/ReviewPage'
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route element={<AppLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="intelligence" element={<IntelligencePage />} />
           <Route path="forecast" element={<ForecastPage />} />
           <Route path="cases" element={<CasesPage />} />
           <Route path="cases/:caseId" element={<CaseDetailPage />} />

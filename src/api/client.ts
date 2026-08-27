@@ -73,3 +73,27 @@ export async function apiPost<T>(
   if (!res.ok) throw new ApiError(res.status, data)
   return data as T
 }
+
+export async function apiPatch<T>(
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<T> {
+  const res = await fetch(buildUrl(path), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new ApiError(res.status, data)
+  return data as T
+}
+
+export async function apiDelete<T = { status: string; message: string }>(
+  path: string,
+): Promise<T> {
+  const res = await fetch(buildUrl(path), { method: 'DELETE' })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new ApiError(res.status, data)
+  return data as T
+}
