@@ -3422,3 +3422,150 @@ a.button-link.primary,
   background: var(--surface);
   border: 1px solid var(--line);
 }
+
+/* Floating Ask Revive launcher */
+a.ask-revive-launcher {
+  --ar-accent: #0f5bd6;
+  --ar-bright: #3d8bfd;
+  --ar-deep: #0842a8;
+  position: fixed;
+  right: 0.65rem;
+  bottom: 1.15rem;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #fff;
+}
+
+a.ask-revive-launcher:hover,
+a.ask-revive-launcher:focus-visible {
+  color: #fff;
+  text-decoration: none;
+}
+
+a.ask-revive-launcher:focus-visible .ask-revive-launcher-core {
+  outline: 3px solid color-mix(in srgb, #fff 70%, var(--ar-bright));
+  outline-offset: 3px;
+}
+
+.ask-revive-launcher-core {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.28rem 0.85rem 0.28rem 0.28rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #fff 45%, transparent);
+  background: linear-gradient(
+    120deg,
+    #5aa2ff 0%,
+    var(--ar-bright) 22%,
+    var(--ar-accent) 58%,
+    var(--ar-deep) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 40%, transparent) inset,
+    0 -1px 0 color-mix(in srgb, #000 18%, transparent) inset,
+    0 8px 22px color-mix(in srgb, var(--ar-accent) 42%, transparent),
+    0 2px 8px rgba(8, 40, 110, 0.24);
+  transition: border-color 0.2s ease;
+}
+
+a.ask-revive-launcher:hover .ask-revive-launcher-core {
+  border-color: transparent;
+}
+
+.ask-revive-launcher-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 28%, #fff 0%, #dcebff 38%, color-mix(in srgb, var(--ar-bright) 55%, #fff) 100%);
+  border: 1px solid color-mix(in srgb, #fff 70%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, #fff 16%, transparent),
+    0 3px 8px rgba(8, 40, 110, 0.22);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ask-revive-launcher-mark {
+  display: inline-block;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--ar-deep);
+  transform-origin: center;
+  animation: ask-revive-gemini 2.6s ease-in-out infinite;
+}
+
+.ask-revive-launcher-label {
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(8, 40, 110, 0.28);
+  z-index: 1;
+}
+
+/* Keep page content clear of the floating Ask Revive control */
+.app-shell:not(.app-shell-intel) .main {
+  padding-bottom: 4.25rem;
+}
+
+/* Gemini-like logo motion only */
+@keyframes ask-revive-gemini {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(18deg) scale(1.08);
+  }
+  50% {
+    transform: rotate(0deg) scale(0.92);
+  }
+  75% {
+    transform: rotate(-16deg) scale(1.06);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-revive-launcher-mark {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  a.ask-revive-launcher {
+    right: 0.45rem;
+    bottom: 0.75rem;
+  }
+
+  .ask-revive-launcher-core {
+    width: 2.9rem;
+    min-height: 2.9rem;
+    padding: 0.25rem;
+    justify-content: center;
+  }
+
+  .ask-revive-launcher-label {
+    display: none;
+  }
+
+  .ask-revive-launcher-icon {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+
+  .app-shell:not(.app-shell-intel) .main {
+    padding-bottom: 4rem;
+  }
+}

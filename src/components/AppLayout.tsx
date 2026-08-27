@@ -9,7 +9,6 @@ const links = [
   { to: '/monitoring', label: 'Monitoring' },
   { to: '/review', label: 'Human Review' },
   { to: '/audit', label: 'Audit' },
-  { to: '/intelligence', label: 'Revive IQ' },
 ]
 
 export function AppLayout() {
@@ -109,6 +108,17 @@ export function AppLayout() {
       <main className={`main${isIntelligence ? ' main-intel' : ''}`}>
         <Outlet key={isIntelligence ? 'intel' : refreshKey} />
       </main>
+
+      {!isIntelligence && (
+        <Link to="/intelligence" className="ask-revive-launcher" title="Ask Revive IQ">
+          <span className="ask-revive-launcher-core">
+            <span className="ask-revive-launcher-icon" aria-hidden="true">
+              <span className="ask-revive-launcher-mark">✦</span>
+            </span>
+            <span className="ask-revive-launcher-label">Ask Revive IQ</span>
+          </span>
+        </Link>
+      )}
     </div>
   )
 }
