@@ -4,6 +4,8 @@
 
 Revive Frontend is the **operations UI** for the Revive B2B receivables recovery engine. It lets operators see revenue at risk, work the case queue, approve gated actions, execute recovery steps, track outcomes, inspect a full audit trail, and explore **recovery forecasts & what-if simulations** — all driven by the Revive backend.
 
+**Revive IQ** is the in-app intelligence center: ask plain-language questions about the portfolio, customers, cases, forecasts, or Revive itself, and get evidence-backed answers with sources and suggested follow-ups. It is read-only in v1 — it explains and navigates; it does not execute recovery actions.
+
 🏆 Built for the **Razorpay Buildathon** — **Track 03: AI Revenue Recovery**
 
 ---
@@ -66,6 +68,8 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
              🧾 Audit Trail ──► newest-first scrollable history
                   │
              📡 Monitoring ──► open loop & recovery views
+                  │
+             ✦ Revive IQ ──► ask · evidence · sources · follow-ups
 ```
 
 | Screen | Role in the loop |
@@ -79,16 +83,37 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
 | ⚡ **Execute** | One authorized run per action; then monitoring proposes the next step |
 | 📡 **Monitoring** | Cases in outcome monitoring / escalated / recovered views |
 | 🧾 **Audit** | Paginated case list + newest-first scrollable timeline with case context |
+| ✦ **Revive IQ** | Conversational command center — portfolio, customers, cases, forecasts, and product knowledge with evidence, sources, and deep links into cases |
 
 ### 🧩 How the pieces fit
 
-- 🖼️ **Pages** — route-level screens for dashboard, forecast, cases, review, monitoring, and audit  
+- 🖼️ **Pages** — route-level screens for dashboard, forecast, cases, review, monitoring, audit, and **Revive IQ**  
 - 🧩 **Components** — shared layout, status badges, confirm dialogs, history nav, loading / error states  
 - 🔌 **API client** — typed `fetch` layer (`VITE_API_BASE`) talking to Revive Backend `/api/v1`  
 - 🪝 **Hooks** — async data loading, debounced search  
 - 🎨 **Design system** — CSS variables, expressive typography, sticky ops chrome, scrollable audit rails  
 
-No silent autonomy in the UI: **policy + human review** gate execution; **monitoring** unlocks the next action. Forecast and what-if views are **estimates / counterfactuals**, not booked recovery.
+No silent autonomy in the UI: **policy + human review** gate execution; **monitoring** unlocks the next action. Forecast and what-if views are **estimates / counterfactuals**, not booked recovery. **Revive IQ** is read-only — it surfaces answers and navigation, never bypasses policy or triggers execute / review from chat.
+
+---
+
+## ✦ Revive IQ
+
+Revive IQ is the Ops UI’s **intelligence center**, not a generic embedded chatbot. Merchants ask about the business or about Revive itself; answers stay grounded in Revive’s live data and policy.
+
+| Capability | What you see in the UI |
+|------------|------------------------|
+| 📚 **Knowledge** | Who Revive IQ is, what it can do, limitations, how to use it |
+| 📊 **Portfolio** | Revenue at risk, recovery rate, pending / overdue customers |
+| 👥 **Customers** | Lookup by name, why unpaid, recommended next step |
+| 📁 **Cases** | Status, priority rationale, decision / policy explain · open case from the answer |
+| 📈 **Forecast & analytics** | Horizon estimates, root causes, heatmap — with estimate disclaimers |
+
+**Empty state** opens as a command center: live business overview, category tiles (Revenue & Risk, Customers, Recovery, Forecast, Cases, About), featured prompts, and quick actions.
+
+**Answers** can include evidence, sources, an analyzed checklist, diagnosis confidence where relevant, suggested follow-ups, and links into case detail. Conversations are listed in the sidebar (Today / Yesterday / Earlier) with rename and delete.
+
+**v1 boundary:** Explain and navigate only — no chat-triggered execute, review approve, or customer send.
 
 ---
 
@@ -107,7 +132,7 @@ No silent autonomy in the UI: **policy + human review** gate execution; **monito
 
 ## 🔗 Related
 
-⚙️ Engine API: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics
+⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ**
 
 ---
 
