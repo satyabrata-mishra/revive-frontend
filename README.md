@@ -2,9 +2,11 @@
 
 ### 💸 Recover Revenue. Intelligently.
 
-Revive Frontend is the **operations UI** for the Revive B2B receivables recovery engine. It lets operators see revenue at risk, work the case queue, approve gated actions, execute recovery steps, track outcomes, inspect a full audit trail, and explore **recovery forecasts & what-if simulations** — all driven by the Revive backend.
+Revive Frontend is the **operations UI** for the Revive B2B receivables recovery engine. It lets operators see revenue at risk, work the case queue, approve gated actions, execute recovery steps, track outcomes, inspect a full audit trail, explore **recovery forecasts & what-if simulations**, and run the **Recovery Simulator** to compare multi-step strategies before acting — all driven by the Revive backend.
 
 **Revive IQ** is the in-app intelligence center: ask plain-language questions about the portfolio, customers, cases, forecasts, or Revive itself, and get evidence-backed answers with sources and suggested follow-ups. It is read-only in v1 — it explains and navigates; it does not execute recovery actions.
+
+**Recovery Simulator** is a dedicated what-if sandbox: pick a receivable, build single- or multi-step strategies, tune assumptions, run seeded Monte Carlo simulations, compare scenarios, and see a transparent recommendation — without ever contacting the customer or changing case state.
 
 🏆 Built for the **Razorpay Buildathon** — **Track 03: AI Revenue Recovery**
 
@@ -61,6 +63,7 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
                   │              │
                   │              ├── 🧠 Diagnosis / strategy / policy
                   │              ├── 📈 Case forecast + action what-if
+                  │              ├── 🧪 Open in Simulator
                   │              └── 📡 Monitoring outcome
                   │
              👤 Human Review ◄── policy gate
@@ -68,6 +71,8 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
              🧾 Audit Trail ──► newest-first scrollable history
                   │
              📡 Monitoring ──► open loop & recovery views
+                  │
+             🧪 Simulator ──► strategy builder · Monte Carlo · compare · recommend
                   │
              ✦ Revive IQ ──► ask · evidence · sources · follow-ups
 ```
@@ -78,22 +83,24 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
 | 📊 **Dashboard** | Live KPIs — revenue at risk, recovered, recovery rate, P1 queue, recent recoveries; entry to Forecast |
 | 📈 **Forecast** | Merchant recovery estimates (7 / 14 / 30-day), portfolio what-if, recovery trend & velocity, root-cause mix, risk heatmap — clearly labeled as forecasts / simulations |
 | 📁 **Cases** | Searchable / filterable case queue across the pipeline |
-| 🔎 **Case Detail** | Full case brief — risk, cause, policy, execute, ledger, timeline, case forecast, and action what-if comparison |
+| 🔎 **Case Detail** | Full case brief — risk, cause, policy, execute, ledger, timeline, case forecast, and action what-if comparison · deep link into Simulator |
 | 👤 **Human Review** | Approve / reject / escalate gated cases (with reviewer notes) so Execute can unlock |
 | ⚡ **Execute** | One authorized run per action; then monitoring proposes the next step |
 | 📡 **Monitoring** | Cases in outcome monitoring / escalated / recovered views |
 | 🧾 **Audit** | Paginated case list + newest-first scrollable timeline with case context |
+| 🧪 **Simulator** | Case-level recovery strategy sandbox — multi-step plans, constraints, Monte Carlo outcomes, scenario compare & recommendation (simulated only) |
 | ✦ **Revive IQ** | Conversational command center — portfolio, customers, cases, forecasts, and product knowledge with evidence, sources, and deep links into cases |
 
 ### 🧩 How the pieces fit
 
-- 🖼️ **Pages** — route-level screens for dashboard, forecast, cases, review, monitoring, audit, and **Revive IQ**  
+- 🖼️ **Pages** — route-level screens for dashboard, forecast, cases, review, monitoring, audit, **Simulator**, and **Revive IQ**  
 - 🧩 **Components** — shared layout, status badges, confirm dialogs, history nav, loading / error states  
 - 🔌 **API client** — typed `fetch` layer (`VITE_API_BASE`) talking to Revive Backend `/api/v1`  
+- 🧮 **Simulator engine** — client-side Monte Carlo + constraint validation (`src/lib/simulator`) with a facade ready for future `/simulator/*` APIs  
 - 🪝 **Hooks** — async data loading, debounced search  
 - 🎨 **Design system** — CSS variables, expressive typography, sticky ops chrome, scrollable audit rails  
 
-No silent autonomy in the UI: **policy + human review** gate execution; **monitoring** unlocks the next action. Forecast and what-if views are **estimates / counterfactuals**, not booked recovery. **Revive IQ** is read-only — it surfaces answers and navigation, never bypasses policy or triggers execute / review from chat.
+No silent autonomy in the UI: **policy + human review** gate execution; **monitoring** unlocks the next action. Forecast, what-if, and **Simulator** views are **estimates / counterfactuals**, not booked recovery — the Simulator never calls execute or contacts customers. **Revive IQ** is read-only — it surfaces answers and navigation, never bypasses policy or triggers execute / review from chat.
 
 ---
 
@@ -117,6 +124,27 @@ Revive IQ is the Ops UI’s **intelligence center**, not a generic embedded chat
 
 ---
 
+## 🧪 Recovery Simulator
+
+The Recovery Simulator answers: **“If I take this recovery action on this receivable, what is likely to happen?”**
+
+It is a dedicated decision-support screen (`/simulator`) — not live execution. Every run is labeled **SIMULATED — NO ACTION WILL BE EXECUTED**.
+
+| Capability | What you see in the UI |
+|------------|------------------------|
+| 📁 **Case picker** | Search and select a live receivable; active-case summary with outstanding, overdue, priority, root cause |
+| 🧱 **Strategy builder** | Multi-step action sequences with delays, presets (Aggressive / Balanced / Conservative), timeline + contact budget |
+| ⚙️ **Assumptions** | Payment / response / partial probabilities, recovery window, max contacts, Monte Carlo runs, reproducible seed |
+| 🧮 **Outcomes** | Expected recovery & net recovery, recovery rate, full / partial / no-recovery probabilities, expected time, risk, confidence |
+| 📊 **Compare** | Save scenarios locally, compare side-by-side, transparent recommendation by optimization objective |
+| 🛡️ **Constraints** | Blocks invalid plans (opt-out, dispute, expired window, max contacts) before simulation |
+
+**Engine:** Client-side Monte Carlo in `src/lib/simulator`, calibrated when possible from existing action-comparison data. Scenario history is stored in the browser for now; the API facade is shaped for future backend `/simulator/*` endpoints.
+
+**Entry points:** Navbar **Simulator**, or **Open in Simulator** from Case Detail what-if.
+
+---
+
 ## 🛠️ Stack
 
 | Area | Tools |
@@ -132,7 +160,7 @@ Revive IQ is the Ops UI’s **intelligence center**, not a generic embedded chat
 
 ## 🔗 Related
 
-⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ**
+⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ** · Recovery Simulator (UI sandbox)
 
 ---
 

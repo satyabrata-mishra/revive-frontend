@@ -9,6 +9,7 @@ const links = [
   { to: '/monitoring', label: 'Monitoring' },
   { to: '/review', label: 'Human Review' },
   { to: '/audit', label: 'Audit' },
+  { to: '/simulator', label: 'Simulator' },
 ]
 
 export function AppLayout() {

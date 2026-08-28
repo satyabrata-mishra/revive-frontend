@@ -689,7 +689,14 @@ export function CaseDetailPage() {
           )}
         </Section>
 
-        <Section title="What If?">
+        <Section
+          title="What If?"
+          right={
+            <Link to={`/simulator?caseId=${encodeURIComponent(caseId)}`} className="button-link">
+              Open in Simulator →
+            </Link>
+          }
+        >
           {whatIf.loading && <Loading size="sm" label="What-if" />}
           {whatIf.data && (
             <>

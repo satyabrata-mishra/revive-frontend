@@ -9,6 +9,7 @@ import { IntelligencePage } from './pages/IntelligencePage'
 import { LandingPage } from './pages/LandingPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ReviewPage } from './pages/ReviewPage'
+import { SimulatorPage } from './pages/SimulatorPage'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="intelligence" element={<IntelligencePage />} />
           <Route path="forecast" element={<ForecastPage />} />
+          <Route path="simulator" element={<SimulatorPage />} />
           <Route path="cases" element={<CasesPage />} />
           <Route path="cases/:caseId" element={<CaseDetailPage />} />
           <Route path="monitoring" element={<MonitoringPage />} />
