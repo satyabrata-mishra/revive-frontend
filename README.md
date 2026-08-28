@@ -8,6 +8,8 @@ Revive Frontend is the **operations UI** for the Revive B2B receivables recovery
 
 **Recovery Simulator** is a dedicated what-if sandbox: pick a receivable, build single- or multi-step strategies, tune assumptions, run seeded Monte Carlo simulations, compare scenarios, and see a transparent recommendation — without ever contacting the customer or changing case state.
 
+**Strategy Lab** is the portfolio layer above the Simulator: change recovery policy knobs (escalation threshold, window, contacts, automation bias), preview the population, simulate Current vs Proposed, compare trade-offs, and approve a strategy configuration — still without executing actions.
+
 🏆 Built for the **Razorpay Buildathon** — **Track 03: AI Revenue Recovery**
 
 ---
@@ -89,6 +91,7 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
 | 📡 **Monitoring** | Cases in outcome monitoring / escalated / recovered views |
 | 🧾 **Audit** | Paginated case list + newest-first scrollable timeline with case context |
 | 🧪 **Simulator** | Case-level recovery strategy sandbox — multi-step plans, constraints, Monte Carlo outcomes, scenario compare & recommendation (simulated only) |
+| 🧪 **Strategy Lab** | Portfolio policy what-if — population filters, knobs/presets, simulate Current vs Proposed, trade-offs, approve config (no execute) |
 | ✦ **Revive IQ** | Conversational command center — portfolio, customers, cases, forecasts, and product knowledge with evidence, sources, and deep links into cases |
 
 ### 🧩 How the pieces fit
@@ -142,6 +145,23 @@ It is a dedicated decision-support screen (`/simulator`) — not live execution.
 **Engine:** Client-side Monte Carlo in `src/lib/simulator`, calibrated when possible from existing action-comparison data. Scenario history is stored in the browser for now; the API facade is shaped for future backend `/simulator/*` endpoints.
 
 **Entry points:** Navbar **Simulator**, or **Open in Simulator** from Case Detail what-if.
+
+---
+
+## 🧪 Strategy Lab
+
+Strategy Lab answers: **“What recovery strategy should we use across the portfolio, and what is likely to happen if we change it?”**
+
+It sits one level above the case-level Recovery Simulator (`/strategy-lab`).
+
+| Capability | What you see |
+|------------|----------------|
+| 📁 **Population** | Priority / root-cause filters + live match preview |
+| 🎛️ **Knobs & presets** | Escalation threshold, recovery window, max contacts, automation bias · Current / High Value First / Aggressive |
+| 🧮 **Simulate & compare** | Current vs Proposed metrics, deltas, recommendation + trade-offs |
+| ✅ **Approve** | Stores approved strategy config only — never executes recovery actions |
+
+Backend: `POST /api/v1/strategy-lab/*` on Revive-Backend.
 
 ---
 

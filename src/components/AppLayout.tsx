@@ -10,6 +10,7 @@ const links = [
   { to: '/review', label: 'Human Review' },
   { to: '/audit', label: 'Audit' },
   { to: '/simulator', label: 'Simulator' },
+  { to: '/strategy-lab', label: 'Strategy Lab' },
 ]
 
 export function AppLayout() {
