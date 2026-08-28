@@ -1,23 +1,179 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { HistoryNav } from './BackButton'
 
-const links = [
-  { to: '/dashboard', label: 'Dashboard', end: true },
-  { to: '/forecast', label: 'Forecast' },
-  { to: '/cases', label: 'Cases' },
-  { to: '/monitoring', label: 'Monitoring' },
-  { to: '/review', label: 'Human Review' },
-  { to: '/audit', label: 'Audit' },
-  { to: '/simulator', label: 'Simulator' },
-  { to: '/strategy-lab', label: 'Strategy Lab' },
+type NavLeaf = {
+  to: string
+  label: string
+  purpose: string
+  end?: boolean
+}
+
+type NavMenu = {
+  id: string
+  label: string
+  items: NavLeaf[]
+}
+
+const menus: NavMenu[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    items: [
+      {
+        to: '/dashboard',
+        label: 'Dashboard',
+        purpose: 'Portfolio pulse — money at risk, recovered, and what needs attention',
+        end: true,
+      },
+    ],
+  },
+  {
+    id: 'recover',
+    label: 'Recover',
+    items: [
+      {
+        to: '/cases',
+        label: 'Cases',
+        purpose: 'Recovery work queue — prioritize by money at stake',
+      },
+      {
+        to: '/review',
+        label: 'Human Review',
+        purpose: 'Authorize policy-gated actions with evidence',
+      },
+      {
+        to: '/monitoring',
+        label: 'Monitoring',
+        purpose: 'What is happening to recovery cases right now',
+      },
+    ],
+  },
+  {
+    id: 'intelligence',
+    label: 'Intelligence',
+    items: [
+      {
+        to: '/forecast',
+        label: 'Recovery Forecast',
+        purpose: 'How much can you recover over 7 / 14 / 30 days',
+      },
+      {
+        to: '/audit',
+        label: 'Decision Audit',
+        purpose: 'Why did Revive take this decision — full trail',
+      },
+    ],
+  },
+  {
+    id: 'optimize',
+    label: 'Optimize',
+    items: [
+      {
+        to: '/strategy-lab',
+        label: 'Recovery Strategy Lab',
+        purpose: 'What recovery strategy should I use across my portfolio?',
+      },
+      {
+        to: '/simulator',
+        label: 'Case Simulator',
+        purpose: 'What happens if I take this action on one case?',
+      },
+    ],
+  },
 ]
+
+function pathMatches(pathname: string, to: string, end?: boolean) {
+  if (end) return pathname === to
+  return pathname === to || pathname.startsWith(`${to}/`)
+}
+
+function menuIsActive(pathname: string, menu: NavMenu) {
+  return menu.items.some((item) => pathMatches(pathname, item.to, item.end))
+}
+
+function NavDropdown({
+  menu,
+  openId,
+  setOpenId,
+}: {
+  menu: NavMenu
+  openId: string | null
+  setOpenId: (id: string | null) => void
+}) {
+  const location = useLocation()
+  const rootRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+  const open = openId === menu.id
+  const active = menuIsActive(location.pathname, menu)
+
+  useEffect(() => {
+    setOpenId(null)
+  }, [location.pathname, setOpenId])
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: PointerEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpenId(null)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpenId(null)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open, setOpenId])
+
+  return (
+    <div
+      ref={rootRef}
+      className={`nav-dropdown${open ? ' is-open' : ''}${active ? ' is-active' : ''}`}
+      onMouseEnter={() => setOpenId(menu.id)}
+      onMouseLeave={() => setOpenId(null)}
+    >
+      <button
+        type="button"
+        className={`nav-link nav-dropdown-trigger${active ? ' active' : ''}${open ? ' is-open' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={menuId}
+        onClick={() => setOpenId(open ? null : menu.id)}
+      >
+        {menu.label}
+        <span className="nav-caret" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      <div id={menuId} className="nav-menu" role="menu">
+        {menu.items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            role="menuitem"
+            className={({ isActive }) =>
+              isActive ? 'nav-menu-item is-active' : 'nav-menu-item'
+            }
+            onClick={() => setOpenId(null)}
+          >
+            <span className="nav-menu-item-label">{item.label}</span>
+            <span className="nav-menu-item-purpose">{item.purpose}</span>
+          </NavLink>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function AppLayout() {
   const location = useLocation()
   const isIntelligence = location.pathname.startsWith('/intelligence')
   const [refreshKey, setRefreshKey] = useState(0)
   const [toolbarStuck, setToolbarStuck] = useState(false)
+  const [openId, setOpenId] = useState<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -74,16 +230,14 @@ export function AppLayout() {
             <span className="brand-sub">Recover Revenue. Intelligently.</span>
           </div>
         </Link>
-        <nav className="nav">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.end}
-              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            >
-              {l.label}
-            </NavLink>
+        <nav className="nav" aria-label="Primary">
+          {menus.map((menu) => (
+            <NavDropdown
+              key={menu.id}
+              menu={menu}
+              openId={openId}
+              setOpenId={setOpenId}
+            />
           ))}
         </nav>
         <div className="merchant-chip" title="Signed in merchant context">
@@ -112,7 +266,11 @@ export function AppLayout() {
       </main>
 
       {!isIntelligence && (
-        <Link to="/intelligence" className="ask-revive-launcher" title="Ask Revive IQ">
+        <Link
+          to="/intelligence"
+          className="ask-revive-launcher"
+          title="Ask Revive IQ — portfolio answers with evidence (read-only)"
+        >
           <span className="ask-revive-launcher-core">
             <span className="ask-revive-launcher-icon" aria-hidden="true">
               <span className="ask-revive-launcher-mark">✦</span>

@@ -65,7 +65,7 @@ export function CasesPage() {
       <div className="page-head">
         <div>
           <h1>Cases</h1>
-          <p>Recovery work queue — prioritize by money at stake and next action.</p>
+          <p>What should I work next? Recovery queue prioritized by money at stake.</p>
         </div>
       </div>
 

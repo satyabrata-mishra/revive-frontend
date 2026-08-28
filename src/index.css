@@ -136,9 +136,9 @@ h2 {
   backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 1000;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .brand-block {
@@ -185,12 +185,12 @@ h2 {
 
 .nav {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  align-self: stretch;
   gap: 0.15rem;
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: visible;
 }
 
 .nav::-webkit-scrollbar {
@@ -198,6 +198,9 @@ h2 {
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
   padding: 0.4rem 0.75rem;
   border-radius: var(--radius-sm);
   color: var(--muted);
@@ -207,7 +210,114 @@ h2 {
   flex-shrink: 0;
   line-height: 1.2;
   border: 1px solid transparent;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
   transition: color var(--ease), background var(--ease);
+  text-decoration: none;
+}
+
+.nav-caret {
+  font-size: 0.65rem;
+  opacity: 0.75;
+  line-height: 1;
+  transform: translateY(0.5px);
+}
+
+.nav-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 100%;
+  z-index: 1;
+}
+
+.nav-dropdown.is-open,
+.nav-dropdown:hover {
+  z-index: 5;
+}
+
+.nav-dropdown-trigger {
+  height: auto;
+  align-self: center;
+}
+
+.nav-dropdown-trigger.is-open,
+.nav-dropdown:hover .nav-dropdown-trigger,
+.nav-dropdown.is-open .nav-dropdown-trigger,
+.nav-dropdown.is-active .nav-dropdown-trigger {
+  color: var(--ink);
+  background: var(--bg-deep);
+}
+
+.nav-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  min-width: 280px;
+  max-width: min(320px, calc(100vw - 1.5rem));
+  padding: 0.55rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+}
+
+/* Keep the pointer inside the same hover target while moving into the menu */
+.nav-menu::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  height: 12px;
+}
+
+.nav-dropdown.is-open > .nav-menu {
+  display: block;
+}
+
+.nav-dropdown:nth-last-child(-n + 2) .nav-menu {
+  left: auto;
+  right: 0;
+}
+
+.nav-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--ease);
+}
+
+.nav-menu-item:hover,
+.nav-menu-item:focus-visible {
+  background: var(--bg-deep);
+  outline: none;
+}
+
+.nav-menu-item.is-active {
+  background: var(--accent-soft);
+}
+
+.nav-menu-item-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.nav-menu-item-purpose {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted);
+  font-weight: 450;
 }
 
 .nav-link:hover {
@@ -983,6 +1093,9 @@ button.primary .loading-spinner {
   }
   .page-toolbar {
     top: 108px;
+  }
+  .nav-menu {
+    min-width: 260px;
   }
 
   .page-toolbar.is-stuck {
@@ -3429,7 +3542,7 @@ a.ask-revive-launcher {
   --ar-bright: #3d8bfd;
   --ar-deep: #0842a8;
   position: fixed;
-  right: 0.65rem;
+  left: 0.65rem;
   bottom: 1.15rem;
   z-index: 40;
   display: inline-flex;
@@ -3545,7 +3658,7 @@ a.ask-revive-launcher:hover .ask-revive-launcher-core {
 
 @media (max-width: 560px) {
   a.ask-revive-launcher {
-    right: 0.45rem;
+    left: 0.45rem;
     bottom: 0.75rem;
   }
 
@@ -3567,6 +3680,103 @@ a.ask-revive-launcher:hover .ask-revive-launcher-core {
 
   .app-shell:not(.app-shell-intel) .main {
     padding-bottom: 4rem;
+  }
+}
+
+/* ── Optimize hub ─────────────────────────────────────────────── */
+.optimize-page {
+  padding-bottom: 1.5rem;
+}
+
+.optimize-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.35rem;
+}
+
+.optimize-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.25rem 1.35rem 1.15rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--accent-soft) 55%, #fff) 0%, var(--surface) 42%),
+    var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--ease), box-shadow var(--ease), transform var(--ease);
+  min-height: 100%;
+}
+
+.optimize-card:hover,
+.optimize-card:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.optimize-card-kicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.optimize-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.optimize-card > p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.optimize-card-question {
+  margin-top: 0.15rem !important;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-deep) 70%, #fff);
+  border: 1px solid var(--line);
+  font-size: 0.875rem !important;
+  font-weight: 600;
+  color: var(--ink) !important;
+  font-style: italic;
+}
+
+.optimize-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.optimize-card-cta {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+@media (max-width: 860px) {
+  .optimize-grid {
+    grid-template-columns: 1fr;
   }
 }
 

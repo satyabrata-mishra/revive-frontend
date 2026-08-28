@@ -62,7 +62,7 @@ export function DashboardPage() {
     <div>
       <div className="page-head">
         <div>
-          <h1>Operations Dashboard</h1>
+          <h1>Overview</h1>
           <p>Recover revenue intelligently — money at risk, attention queue, and outcomes.</p>
         </div>
       </div>

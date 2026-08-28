@@ -147,7 +147,8 @@ export function ReviewPage() {
         <div>
           <h1>Human Review</h1>
           <p>
-            Authorize a specific action with enough evidence — not “trust the AI.”
+            Can I safely authorize this? Approve, reject, or escalate with evidence — not
+            “trust the AI.”
           </p>
         </div>
       </div>

@@ -258,10 +258,10 @@ export function StrategyLabPage() {
     <div className="strategy-lab-page">
       <div className="page-head">
         <div>
-          <h1>Strategy Lab</h1>
+          <h1>Recovery Strategy Lab</h1>
           <p>
-            Test recovery strategies on your receivables portfolio before applying them. Design →
-            simulate → compare → approve — never silent execution.
+            What recovery strategy should I use across my portfolio? Design → simulate →
+            compare → approve — never silent execution.
           </p>
         </div>
       </div>

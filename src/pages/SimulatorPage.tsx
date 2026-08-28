@@ -257,8 +257,11 @@ export function SimulatorPage() {
     <div className="simulator-page">
       <div className="page-head">
         <div>
-          <h1>Revive Recovery Simulator</h1>
-          <p>What recovery strategy should we simulate? Model outcomes without executing actions.</p>
+          <h1>Case Simulator</h1>
+          <p>
+            What happens if I take this action? Compare recovery outcomes for one case —
+            nothing is executed.
+          </p>
         </div>
       </div>
 

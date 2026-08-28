@@ -90,8 +90,8 @@ export function AuditPage() {
     <div>
       <div className="page-head">
         <div>
-          <h1>Audit Trail</h1>
-          <p>Prove every decision and execution — not a black-box agent.</p>
+          <h1>Decision Audit</h1>
+          <p>Why did Revive do this — prove every decision and execution.</p>
         </div>
       </div>
 
