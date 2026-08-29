@@ -107,6 +107,17 @@ export function CaseDetailPage() {
     caseState === 'CLOSED' ||
     liveResult?.pipeline_status === 'RECOVERED' ||
     liveResult?.pipeline_status === 'CLOSED'
+  const invoiceStatus = String(
+    nest(unified.data as Record<string, unknown> | undefined, 'invoice', 'status') || '',
+  ).toUpperCase()
+  const openDisputeBlocksContact =
+    invoiceStatus === 'DISPUTED' ||
+    policy.data?.review_status === 'BLOCKED_DISPUTE' ||
+    liveResult?.abort_reason === 'OPEN_DISPUTE' ||
+    String(liveResult?.execution_status || '').includes('OPEN_DISPUTE') ||
+    (policy.data?.policy_reasons || []).some((r) =>
+      String(r).toLowerCase().includes('open dispute'),
+    )
   const policyUnlocked =
     (policy.data?.decision === 'APPROVED' || policy.data?.decision === 'MODIFIED') &&
     policy.data?.allowed === true &&
@@ -124,6 +135,7 @@ export function CaseDetailPage() {
     !caseClosed &&
     !caseEscalated &&
     !sameActionAlreadyDone
+    && !openDisputeBlocksContact
 
   const canAdvanceMonitoring =
     !!caseId &&
@@ -135,6 +147,13 @@ export function CaseDetailPage() {
     if (canExecute) return null
     if (caseClosed) {
       return 'Case is closed after recovery — no further execute needed.'
+    }
+    if (openDisputeBlocksContact) {
+      return (
+        'Open dispute blocks contact recovery (reminder, payment link, invoice resend). ' +
+        'Resolve the dispute first, or use Escalate on Human Review for senior handling — ' +
+        'do not re-approve the same contact action.'
+      )
     }
     if (policy.data?.decision === 'HUMAN_REVIEW' || policy.data?.requires_human_approval) {
       return 'Execute is locked until a human approves this case on Human Review.'
@@ -282,11 +301,13 @@ export function CaseDetailPage() {
     policy.data?.decision ||
     str(nest(c.authorization as Record<string, unknown>, 'decision'))
   const bannerTone =
-    policyDecision === 'APPROVED'
-      ? 'ok'
-      : policyDecision === 'BLOCKED'
-        ? 'bad'
-        : 'warn'
+    openDisputeBlocksContact
+      ? 'bad'
+      : policyDecision === 'APPROVED'
+        ? 'ok'
+        : policyDecision === 'BLOCKED'
+          ? 'bad'
+          : 'warn'
 
   const reasonText =
     str(strategy?.action_rationale) ||
@@ -318,6 +339,9 @@ export function CaseDetailPage() {
   const policyReasons = policy.data?.policy_reasons || []
   const decisionHeadline = (() => {
     if (caseClosed) return 'Case closed — recovery loop finished'
+    if (openDisputeBlocksContact) {
+      return 'Open dispute — contact recovery blocked'
+    }
     if (policy.data?.requires_human_approval || policyDecision === 'HUMAN_REVIEW') {
       return `Human approval required${aiRecommendedAction ? ` for ${formatAction(aiRecommendedAction)}` : ''}`
     }
@@ -331,6 +355,23 @@ export function CaseDetailPage() {
   })()
   const decisionWhy = (() => {
     const bits: string[] = []
+    if (openDisputeBlocksContact) {
+      bits.push(
+        'Invoice status is DISPUTED, so Revive will not run contact recovery (reminder, payment link, resend)',
+      )
+      bits.push(
+        'Correct next step: open Human Review and Escalate for senior dispute handling (or clear the dispute outside Revive, then re-run recovery)',
+      )
+      if (diagnosisRoot) {
+        bits.push(
+          `${formatCause(diagnosisRoot)} diagnosed` +
+            (diagnosisConfidence != null
+              ? ` at ${formatPct(diagnosisConfidence)} confidence`
+              : ''),
+        )
+      }
+      return bits.join('. ') + '.'
+    }
     if (diagnosisRoot) {
       bits.push(
         `${formatCause(diagnosisRoot)} detected` +
@@ -447,9 +488,15 @@ export function CaseDetailPage() {
             </div>
             <div className="decision-stage">
               <span className="decision-stage-k">2 · Policy</span>
-              <strong>{policyStageLabel(policyDecision)}</strong>
+              <strong>
+                {openDisputeBlocksContact
+                  ? 'Contact recovery blocked'
+                  : policyStageLabel(policyDecision)}
+              </strong>
               <span className="decision-stage-v">
-                Requested {formatAction(policy.data?.requested_action || aiRecommendedAction)}
+                {openDisputeBlocksContact
+                  ? 'Open dispute — escalate, do not execute contact actions'
+                  : `Requested ${formatAction(policy.data?.requested_action || aiRecommendedAction)}`}
               </span>
             </div>
             <div className="decision-stage-arrow" aria-hidden="true">
@@ -480,11 +527,13 @@ export function CaseDetailPage() {
               <strong>
                 {caseClosed
                   ? 'Closed'
-                  : monitorOutcome
-                    ? formatAction(monitorOutcome)
-                    : caseState === 'OUTCOME_MONITORING'
-                      ? 'Monitoring'
-                      : 'Not started'}
+                  : openDisputeBlocksContact
+                    ? 'Waiting on dispute'
+                    : monitorOutcome
+                      ? formatAction(monitorOutcome)
+                      : caseState === 'OUTCOME_MONITORING'
+                        ? 'Monitoring'
+                        : 'Not started'}
               </strong>
               <span className="decision-stage-v">
                 Recovered {formatINRExact(amountRecovered)}
@@ -495,7 +544,7 @@ export function CaseDetailPage() {
             {(policy.data?.requires_human_approval ||
               policyDecision === 'HUMAN_REVIEW' ||
               caseEscalated) && (
-              <Link className="primary button-link" to="/review">
+              <Link className="primary button-link" to={`/review?q=${encodeURIComponent(caseId)}`}>
                 Open Human Review
               </Link>
             )}
@@ -948,6 +997,10 @@ export function CaseDetailPage() {
                     : liveResult.execution_status}
             {liveResult.execution_id ? ` · ${liveResult.execution_id}` : ''}
             {liveResult.abort_reason ? ` · ${liveResult.abort_reason}` : ''}
+            {liveResult.abort_reason === 'OPEN_DISPUTE' ||
+            String(liveResult.execution_status || '').includes('OPEN_DISPUTE')
+              ? ' — contact actions blocked until dispute is resolved; unlock revoked'
+              : ''}
             {' · '}
             recovered {formatINRExact(liveResult.amount_recovered)}
             {liveResult.monitoring_outcome

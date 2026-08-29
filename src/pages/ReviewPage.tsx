@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { reviewApi } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StatusBadge } from '../components/StatusBadge'
@@ -19,7 +19,27 @@ function escalationCopy(item: {
   reason?: string | null
   authorized_action?: string | null
   requested_action?: string | null
+  review_status?: string | null
+  root_cause?: string | null
 }) {
+  const disputeBlocked =
+    item.review_status === 'BLOCKED_DISPUTE' ||
+    String(item.reason || '')
+      .toLowerCase()
+      .includes('open dispute') ||
+    String(item.root_cause || '').toUpperCase() === 'DISPUTE'
+
+  if (disputeBlocked) {
+    return {
+      title: 'Open dispute — contact recovery blocked',
+      why:
+        item.reason ||
+        'Invoice is disputed. Approving a reminder or payment link will abort and loop back here.',
+      humanAction:
+        'Do not approve contact actions. Escalate for senior dispute handling, or resolve the dispute first.',
+      disputeBlocked: true as const,
+    }
+  }
   const decision = item.policy_decision || ''
   if (decision === 'HUMAN_REVIEW') {
     return {
@@ -28,6 +48,7 @@ function escalationCopy(item: {
         item.reason ||
         'Policy requires human judgment before any autonomous customer action.',
       humanAction: 'Authorize this specific action only if the evidence is sufficient.',
+      disputeBlocked: false as const,
     }
   }
   if (decision === 'BLOCKED') {
@@ -35,6 +56,7 @@ function escalationCopy(item: {
       title: 'Automation blocked',
       why: item.reason || 'A hard policy rule blocked autonomous execution.',
       humanAction: 'Resolve the blocking condition or escalate to account management.',
+      disputeBlocked: false as const,
     }
   }
   if (
@@ -46,12 +68,14 @@ function escalationCopy(item: {
       title: 'Routed for human decision',
       why: item.reason || 'Recommended path is a human gate, not auto-recovery.',
       humanAction: 'Review the recommendation and decide whether to authorize.',
+      disputeBlocked: false as const,
     }
   }
   return {
     title: 'Needs attention',
     why: item.reason || 'Case is in the escalated queue.',
     humanAction: 'Inspect case detail before approving any action.',
+    disputeBlocked: false as const,
   }
 }
 
@@ -62,14 +86,21 @@ type PendingConfirm = {
 }
 
 export function ReviewPage() {
+  const [params, setParams] = useSearchParams()
+  const qFromUrl = params.get('q') || ''
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(qFromUrl || null)
   const [sortMode, setSortMode] = useState<StatusSortMode>('severity')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(qFromUrl)
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null)
+
+  useEffect(() => {
+    setSearch(qFromUrl)
+    if (qFromUrl) setExpanded(qFromUrl)
+  }, [qFromUrl])
 
   const count = useAsync(() => reviewApi.count(), [])
   const queue = useAsync(
@@ -177,7 +208,14 @@ export function ReviewPage() {
           <input
             className="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              setSearch(value)
+              const next = new URLSearchParams(params)
+              if (value.trim()) next.set('q', value.trim())
+              else next.delete('q')
+              setParams(next, { replace: true })
+            }}
             placeholder="Search by risk ID, customer, invoice, cause…"
             aria-label="Search review queue"
           />
@@ -224,7 +262,9 @@ export function ReviewPage() {
                 </div>
                 <div className="inline-actions" style={{ alignItems: 'start' }}>
                   <StatusBadge status={item.current_state} />
-                  <Badge tone="warn">{item.review_status}</Badge>
+                  <Badge tone={copy.disputeBlocked ? 'bad' : 'warn'}>
+                    {item.review_status}
+                  </Badge>
                 </div>
               </div>
 
@@ -278,7 +318,12 @@ export function ReviewPage() {
                 <button
                   type="button"
                   className="primary"
-                  disabled={!!busy}
+                  disabled={!!busy || copy.disputeBlocked}
+                  title={
+                    copy.disputeBlocked
+                      ? 'Contact actions cannot be approved while a dispute is open'
+                      : undefined
+                  }
                   onClick={() =>
                     requestAct(
                       item.case_id,

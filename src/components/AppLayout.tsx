@@ -21,6 +21,11 @@ const menus: NavMenu[] = [
     label: 'Overview',
     items: [
       {
+        to: '/control-tower',
+        label: 'Control Tower',
+        purpose: 'Live ops view — what Revive is doing and what needs humans',
+      },
+      {
         to: '/dashboard',
         label: 'Dashboard',
         purpose: 'Portfolio pulse — money at risk, recovered, and what needs attention',

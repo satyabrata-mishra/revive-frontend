@@ -9,6 +9,7 @@ import { IntelligencePage } from './pages/IntelligencePage'
 import { LandingPage } from './pages/LandingPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { OptimizePage } from './pages/OptimizePage'
+import { ControlTowerPage } from './pages/ControlTowerPage'
 import { ReviewPage } from './pages/ReviewPage'
 import { SimulatorPage } from './pages/SimulatorPage'
 import { StrategyLabPage } from './pages/StrategyLabPage'
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route element={<AppLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="control-tower" element={<ControlTowerPage />} />
           <Route path="optimize" element={<OptimizePage />} />
           <Route path="intelligence" element={<IntelligencePage />} />
           <Route path="forecast" element={<ForecastPage />} />
