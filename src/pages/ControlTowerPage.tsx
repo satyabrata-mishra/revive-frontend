@@ -389,14 +389,14 @@ export function ControlTowerPage() {
             <div className="ct-funnel" aria-label="Recovery funnel">
               {performance.data.funnel.map((step) => {
                 const n = step.count ?? 0
+                const atRisk = performance.data?.revenue_at_risk || 1
                 const width =
                   step.amount != null
                     ? Math.min(
                         100,
                         Math.max(
                           18,
-                          (100 * step.amount) /
-                            Math.max(performance.data.revenue_at_risk || 1, step.amount),
+                          (100 * step.amount) / Math.max(atRisk, step.amount),
                         ),
                       )
                     : Math.max(10, (100 * n) / funnelMax)
