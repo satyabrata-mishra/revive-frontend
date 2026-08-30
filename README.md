@@ -6,6 +6,8 @@ Revive Frontend is the **operations UI** for the Revive B2B receivables recovery
 
 **Revive IQ** is the in-app intelligence center: ask plain-language questions about the portfolio, customers, cases, forecasts, or Revive itself, and get evidence-backed answers with sources and suggested follow-ups. It is read-only in v1 — it explains and navigates; it does not execute recovery actions.
 
+**Case Assist** is the case-level operator workspace: open it from a specific receivable to diagnose why money is stuck, compare next actions against policy, draft operator-ready language, and confirm a path — always through the same Human Review / Execute gates as the rest of Ops. It is not another portfolio chatbot.
+
 **Recovery Simulator** is a dedicated what-if sandbox: pick a receivable, build single- or multi-step strategies, tune assumptions, run seeded Monte Carlo simulations, compare scenarios, and see a transparent recommendation — without ever contacting the customer or changing case state.
 
 **Strategy Lab** is the portfolio layer above the Simulator: change recovery policy knobs (escalation threshold, window, contacts, automation bias), preview the population, simulate Current vs Proposed, compare trade-offs, and approve a strategy configuration — still without executing actions.
@@ -65,18 +67,21 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
                   │              │
                   │              ├── 🧠 Diagnosis / strategy / policy
                   │              ├── 📈 Case forecast + action what-if
+                  │              ├── ◆ Case Assist (this case)
                   │              ├── 🧪 Open in Simulator
                   │              └── 📡 Monitoring outcome
                   │
-             👤 Human Review ◄── policy gate
+             👤 Human Review ◄── policy gate · Case Assist entry
                   │
              🧾 Audit Trail ──► newest-first scrollable history
                   │
              📡 Monitoring ──► open loop & recovery views
                   │
+             🗼 Control Tower ──► live pipeline · attention · Case Assist
+                  │
              🧪 Simulator ──► strategy builder · Monte Carlo · compare · recommend
                   │
-             ✦ Revive IQ ──► ask · evidence · sources · follow-ups
+             ✦ Revive IQ ──► ask · evidence · sources · follow-ups (portfolio)
 ```
 
 | Screen | Role in the loop |
@@ -85,10 +90,12 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
 | 📊 **Dashboard** | Live KPIs — revenue at risk, recovered, recovery rate, P1 queue, recent recoveries; entry to Forecast |
 | 📈 **Forecast** | Merchant recovery estimates (7 / 14 / 30-day), portfolio what-if, recovery trend & velocity, root-cause mix, risk heatmap — clearly labeled as forecasts / simulations |
 | 📁 **Cases** | Searchable / filterable case queue across the pipeline |
-| 🔎 **Case Detail** | Full case brief — risk, cause, policy, execute, ledger, timeline, case forecast, and action what-if comparison · deep link into Simulator |
-| 👤 **Human Review** | Approve / reject / escalate gated cases (with reviewer notes) so Execute can unlock |
+| 🔎 **Case Detail** | Full case brief — risk, cause, policy, execute, ledger, timeline, case forecast, and action what-if comparison · **Case Assist** entry · deep link into Simulator |
+| ◆ **Case Assist** | Locked case workspace — evidence, recommendations, policy explain, drafts, and confirm → existing review / execute path |
+| 👤 **Human Review** | Approve / reject / escalate gated cases (with reviewer notes) so Execute can unlock · Case Assist for the same case |
 | ⚡ **Execute** | One authorized run per action; then monitoring proposes the next step |
 | 📡 **Monitoring** | Cases in outcome monitoring / escalated / recovered views |
+| 🗼 **Control Tower** | Live recovery pipeline, attention queue, activity · Case Assist on cases that need a next move |
 | 🧾 **Audit** | Paginated case list + newest-first scrollable timeline with case context |
 | 🧪 **Simulator** | Case-level recovery strategy sandbox — multi-step plans, constraints, Monte Carlo outcomes, scenario compare & recommendation (simulated only) |
 | 🧪 **Strategy Lab** | Portfolio policy what-if — population filters, knobs/presets, simulate Current vs Proposed, trade-offs, approve config (no execute) |
@@ -96,14 +103,14 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
 
 ### 🧩 How the pieces fit
 
-- 🖼️ **Pages** — route-level screens for dashboard, forecast, cases, review, monitoring, audit, **Simulator**, and **Revive IQ**  
-- 🧩 **Components** — shared layout, status badges, confirm dialogs, history nav, loading / error states  
+- 🖼️ **Pages** — route-level screens for dashboard, forecast, cases, review, monitoring, audit, Control Tower, **Case Assist**, **Simulator**, and **Revive IQ**  
+- 🧩 **Components** — shared layout, status badges, Case Assist entry chip, confirm dialogs, history nav, loading / error states  
 - 🔌 **API client** — typed `fetch` layer (`VITE_API_BASE`) talking to Revive Backend `/api/v1`  
 - 🧮 **Simulator engine** — client-side Monte Carlo + constraint validation (`src/lib/simulator`) with a facade ready for future `/simulator/*` APIs  
 - 🪝 **Hooks** — async data loading, debounced search  
 - 🎨 **Design system** — CSS variables, expressive typography, sticky ops chrome, scrollable audit rails  
 
-No silent autonomy in the UI: **policy + human review** gate execution; **monitoring** unlocks the next action. Forecast, what-if, and **Simulator** views are **estimates / counterfactuals**, not booked recovery — the Simulator never calls execute or contacts customers. **Revive IQ** is read-only — it surfaces answers and navigation, never bypasses policy or triggers execute / review from chat.
+No silent autonomy in the UI: **policy + human review** gate execution; **monitoring** unlocks the next action. Forecast, what-if, and **Simulator** views are **estimates / counterfactuals**, not booked recovery — the Simulator never calls execute or contacts customers. **Revive IQ** is portfolio-scoped and read-only — it surfaces answers and navigation, never bypasses policy or triggers execute / review from chat. **Case Assist** stays on one case: it can prepare and confirm through the normal review / execute path, but it never silently contacts the customer or overrides policy.
 
 ---
 
@@ -124,6 +131,25 @@ Revive IQ is the Ops UI’s **intelligence center**, not a generic embedded chat
 **Answers** can include evidence, sources, an analyzed checklist, diagnosis confidence where relevant, suggested follow-ups, and links into case detail. Conversations are listed in the sidebar (Today / Yesterday / Earlier) with rename and delete.
 
 **v1 boundary:** Explain and navigate only — no chat-triggered execute, review approve, or customer send.
+
+---
+
+## ◆ Case Assist
+
+Case Assist is the Ops UI’s **case-scoped operator workspace** — not Revive IQ and not a Microsoft-style floating chatbot. Operators open it from a single receivable (Case Detail hero, Human Review, or Control Tower) to decide the next recovery move with full case context.
+
+| Capability | What you see in the UI |
+|------------|------------------------|
+| 📎 **This case only** | Customer, invoice, outstanding, state, risk, and diagnosis stay pinned while you work |
+| 🧭 **Suggested prompts** | Short operator questions — why stuck, what next, policy, draft language, what-if on this case |
+| 🧾 **Evidence & recommendation** | Grounded amounts and ranked next actions with policy-aware framing |
+| 🛡️ **Policy explain** | Why an action is allowed, blocked, or needs human review — no bypass path |
+| ✍️ **Drafts** | Operator-ready wording for reminders / follow-ups when that path is appropriate |
+| ✅ **Confirm** | Explicit confirm routes into the same Human Review / Execute flow the rest of Ops uses |
+
+**Entry:** short **Case Assist** chip on Case Detail (next to priority / status). Portfolio questions hand off to **Ask Revive IQ**.
+
+**Boundary:** Never silent execute, never policy bypass, never portfolio-wide chat. Dispute / escalated cases stay gated — Assist explains and routes; it does not invent a contact action.
 
 ---
 
@@ -180,7 +206,7 @@ Backend: `POST /api/v1/strategy-lab/*` on Revive-Backend.
 
 ## 🔗 Related
 
-⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ** · Recovery Simulator (UI sandbox)
+⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ** · **Case Assist** · Recovery Simulator (UI sandbox)
 
 ---
 

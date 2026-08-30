@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { casesApi, controlTowerApi } from '../api'
 import type { PipelineStage, Severity } from '../api/controlTower'
+import { CaseAssistLink } from '../components/CaseAssistLink'
 import { Badge, ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
@@ -281,6 +282,7 @@ export function ControlTowerPage() {
                     <Link to={`/cases/${item.case_id}`} className="ct-case-link">
                       {item.case_id}
                     </Link>
+                    <CaseAssistLink caseId={item.case_id} from="control-tower" dense />
                     {item.customer_name ? (
                       <span className="ct-muted"> · {item.customer_name}</span>
                     ) : null}
@@ -340,6 +342,12 @@ export function ControlTowerPage() {
                   <Link to={`/cases/${item.case_id}`} className="ct-attention-cta">
                     {item.cta} →
                   </Link>
+                  <CaseAssistLink
+                    caseId={item.case_id}
+                    from="control-tower"
+                    dense
+                    className="ct-attention-assist"
+                  />
                 </li>
               ))}
             </ul>

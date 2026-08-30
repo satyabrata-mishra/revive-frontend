@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { casesApi, executionApi, forecastApi, monitoringApi, policyApi, simulationApi } from '../api'
 import type { AuditEvent, ExecuteResponse } from '../api/types'
 import { StatusBadge } from '../components/StatusBadge'
+import { CaseAssistLink } from '../components/CaseAssistLink'
 import { Badge, ErrorState, Loading, Section } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import {
@@ -437,7 +438,11 @@ export function CaseDetailPage() {
               </Badge>
             )}
             <StatusBadge status={c.current_state} />
-            <StatusBadge status={c.system_status} />
+            {c.system_status &&
+              c.system_status !== c.current_state && (
+                <StatusBadge status={c.system_status} />
+              )}
+            <CaseAssistLink caseId={caseId} from="case" />
             <Link to="/monitoring" className="row-link" style={{ alignSelf: 'center' }}>
               Monitoring →
             </Link>
@@ -776,7 +781,7 @@ export function CaseDetailPage() {
                   </div>
                 )}
               <div className="table-wrap">
-                <table className="data">
+                <table className="data whatif-table">
                   <thead>
                     <tr>
                       <th>Action</th>
@@ -791,13 +796,21 @@ export function CaseDetailPage() {
                         className={row.is_recommended ? 'row-recommended' : undefined}
                       >
                         <td>
-                          {formatAction(row.action)}
-                          {row.is_recommended && (
-                            <Badge tone="ok">recommended</Badge>
-                          )}
-                          {isHumanGateAction(row.action) && (
-                            <Badge tone="warn">human</Badge>
-                          )}
+                          <div className="whatif-action">
+                            <span className="whatif-action-name">
+                              {formatAction(row.action)}
+                            </span>
+                            {(row.is_recommended || isHumanGateAction(row.action)) && (
+                              <span className="whatif-action-tags">
+                                {row.is_recommended && (
+                                  <Badge tone="ok">recommended</Badge>
+                                )}
+                                {isHumanGateAction(row.action) && (
+                                  <Badge tone="warn">human</Badge>
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="num">
                           <strong>{formatINRExact(row.expected_recovery)}</strong>

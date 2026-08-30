@@ -176,6 +176,8 @@ function NavDropdown({
 export function AppLayout() {
   const location = useLocation()
   const isIntelligence = location.pathname.startsWith('/intelligence')
+  const isCopilot = /\/cases\/[^/]+\/copilot\/?$/.test(location.pathname)
+  const isLockedWorkspace = isIntelligence || isCopilot
   const [refreshKey, setRefreshKey] = useState(0)
   const [toolbarStuck, setToolbarStuck] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -197,7 +199,7 @@ export function AppLayout() {
   }, [isIntelligence])
 
   useEffect(() => {
-    if (!isIntelligence) return
+    if (!isLockedWorkspace) return
     const root = document.getElementById('root')
     const prevHtml = document.documentElement.style.overflow
     const prevBody = document.body.style.overflow
@@ -223,10 +225,26 @@ export function AppLayout() {
         root.style.overflow = prevRootO
       }
     }
-  }, [isIntelligence])
+  }, [isLockedWorkspace])
+
+  const shellClass = [
+    'app-shell',
+    isIntelligence ? 'app-shell-intel' : '',
+    isCopilot ? 'app-shell-copilot' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const mainClass = [
+    'main',
+    isIntelligence ? 'main-intel' : '',
+    isCopilot ? 'main-copilot' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <div className={`app-shell${isIntelligence ? ' app-shell-intel' : ''}`}>
+    <div className={shellClass}>
       <header className="topbar">
         <Link to="/" className="brand-block brand-link">
           <img src="/revive-logo.png" alt="" className="topbar-logo" />
@@ -258,19 +276,27 @@ export function AppLayout() {
           </span>
         </div>
       </header>
+      {/* One shared history toolbar for every AppLayout page (incl. Copilot + ReviveIQ). */}
       {!isIntelligence && (
         <>
           <div ref={sentinelRef} className="page-toolbar-sentinel" aria-hidden="true" />
-          <div className={`page-toolbar${toolbarStuck ? ' is-stuck' : ''}`}>
+          <div
+            className={`page-toolbar${toolbarStuck ? ' is-stuck' : ''}${isCopilot ? ' copilot-toolbar' : ''}`}
+          >
             <HistoryNav onRefresh={() => setRefreshKey((k) => k + 1)} />
           </div>
         </>
       )}
-      <main className={`main${isIntelligence ? ' main-intel' : ''}`}>
-        <Outlet key={isIntelligence ? 'intel' : refreshKey} />
+      {isIntelligence && (
+        <div className="page-toolbar intel-history-toolbar">
+          <HistoryNav onRefresh={() => setRefreshKey((k) => k + 1)} />
+        </div>
+      )}
+      <main className={mainClass}>
+        <Outlet key={refreshKey} />
       </main>
 
-      {!isIntelligence && (
+      {!isLockedWorkspace && (
         <Link
           to="/intelligence"
           className="ask-revive-launcher"

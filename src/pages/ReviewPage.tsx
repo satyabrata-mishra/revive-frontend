@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { reviewApi } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { CaseAssistLink } from '../components/CaseAssistLink'
 import { StatusBadge } from '../components/StatusBadge'
 import { StatusSortControls } from '../components/StatusSortControls'
 import { Badge, ErrorState, Loading, Section } from '../components/ui'
@@ -360,6 +361,7 @@ export function ReviewPage() {
                     'Escalate'
                   )}
                 </button>
+                <CaseAssistLink caseId={item.case_id} from="review" />
                 <Link to={`/cases/${item.case_id}`}>
                   <button type="button">Review Case</button>
                 </Link>

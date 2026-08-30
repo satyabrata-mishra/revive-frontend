@@ -1,47 +1,55 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-
-type HistState = {
-  stack: string[]
-  index: number
-}
+import {
+  getNavHistorySnapshot,
+  recordNavLocation,
+  stepNavBack,
+  stepNavForward,
+  subscribeNavHistory,
+} from '../lib/navHistory'
 
 type Props = {
   className?: string
   onRefresh?: () => void
 }
 
+function pathOf(loc: { pathname: string; search: string; hash: string }) {
+  return `${loc.pathname}${loc.search}${loc.hash}`
+}
+
 export function HistoryNav({ className = '', onRefresh }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [hist, setHist] = useState<HistState>({
-    stack: [location.key],
-    index: 0,
-  })
+  const snap = useSyncExternalStore(
+    subscribeNavHistory,
+    getNavHistorySnapshot,
+    getNavHistorySnapshot,
+  )
 
+  // Keep shared stack in sync with every route under AppLayout.
   useEffect(() => {
-    setHist((prev) => {
-      const existing = prev.stack.indexOf(location.key)
-      if (existing !== -1) {
-        return { stack: prev.stack, index: existing }
-      }
-      const stack = [...prev.stack.slice(0, prev.index + 1), location.key]
-      return { stack, index: stack.length - 1 }
-    })
-  }, [location.key])
+    recordNavLocation(pathOf(location), location.key)
+  }, [location.pathname, location.search, location.hash, location.key])
 
-  const canBack = hist.index > 0
-  const canForward = hist.index < hist.stack.length - 1
+  function goBack() {
+    const target = stepNavBack()
+    if (target != null) navigate(target)
+  }
+
+  function goForward() {
+    const target = stepNavForward()
+    if (target != null) navigate(target)
+  }
 
   return (
     <div className={`history-nav ${className}`.trim()} role="group" aria-label="Page navigation">
       <button
         type="button"
         className="nav-history-btn"
-        onClick={() => navigate(-1)}
-        disabled={!canBack}
+        onClick={goBack}
+        disabled={!snap.canBack}
         aria-label="Go back"
-        title={canBack ? 'Back' : 'No previous page'}
+        title={snap.canBack ? `Back to ${snap.backPath}` : 'No previous page'}
       >
         <span aria-hidden="true">←</span>
       </button>
@@ -60,10 +68,10 @@ export function HistoryNav({ className = '', onRefresh }: Props) {
         <button
           type="button"
           className="nav-history-btn"
-          onClick={() => navigate(1)}
-          disabled={!canForward}
+          onClick={goForward}
+          disabled={!snap.canForward}
           aria-label="Go forward"
-          title={canForward ? 'Forward' : 'No next page'}
+          title={snap.canForward ? `Forward to ${snap.forwardPath}` : 'No next page'}
         >
           <span aria-hidden="true">→</span>
         </button>

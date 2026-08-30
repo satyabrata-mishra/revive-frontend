@@ -256,7 +256,10 @@ export function AuditPage() {
                   <StatusBadge status={summary.data.priority_level} />
                 ) : null}
                 <StatusBadge status={summary.data.current_state} />
-                <StatusBadge status={summary.data.system_status} />
+                {summary.data.system_status &&
+                  summary.data.system_status !== summary.data.current_state && (
+                    <StatusBadge status={summary.data.system_status} />
+                  )}
               </div>
             </div>
 

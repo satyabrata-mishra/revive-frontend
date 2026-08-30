@@ -10,6 +10,7 @@ import { LandingPage } from './pages/LandingPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { OptimizePage } from './pages/OptimizePage'
 import { ControlTowerPage } from './pages/ControlTowerPage'
+import { CopilotPage } from './pages/CopilotPage'
 import { ReviewPage } from './pages/ReviewPage'
 import { SimulatorPage } from './pages/SimulatorPage'
 import { StrategyLabPage } from './pages/StrategyLabPage'
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="strategy-lab" element={<StrategyLabPage />} />
           <Route path="cases" element={<CasesPage />} />
           <Route path="cases/:caseId" element={<CaseDetailPage />} />
+          <Route path="cases/:caseId/copilot" element={<CopilotPage />} />
           <Route path="monitoring" element={<MonitoringPage />} />
           <Route path="review" element={<ReviewPage />} />
           <Route path="audit" element={<AuditPage />} />
