@@ -187,6 +187,19 @@ export function ControlTowerPage() {
         </div>
       </header>
 
+      <div className="ct-warroom-callout">
+        <div>
+          <strong>Recovery anomaly workspace</strong>
+          <p>
+            For coordinated high-impact incidents, open the Recovery War Room — not a case
+            queue, an incident command center.
+          </p>
+        </div>
+        <Link className="primary button-link" to="/war-room/INC-2026-014">
+          Open War Room →
+        </Link>
+      </div>
+
       <section className="ct-kpi-grid" aria-label="Executive KPIs">
         <Kpi
           label="Revenue at Risk"

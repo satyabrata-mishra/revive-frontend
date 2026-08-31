@@ -14,6 +14,8 @@ import { CopilotPage } from './pages/CopilotPage'
 import { ReviewPage } from './pages/ReviewPage'
 import { SimulatorPage } from './pages/SimulatorPage'
 import { StrategyLabPage } from './pages/StrategyLabPage'
+import { WarRoomPage } from './pages/WarRoomPage'
+import { WarRoomIncidentPage } from './pages/WarRoomIncidentPage'
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="control-tower" element={<ControlTowerPage />} />
+          <Route path="war-room" element={<WarRoomPage />} />
+          <Route path="war-room/:incidentId" element={<WarRoomIncidentPage />} />
           <Route path="optimize" element={<OptimizePage />} />
           <Route path="intelligence" element={<IntelligencePage />} />
           <Route path="forecast" element={<ForecastPage />} />

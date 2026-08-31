@@ -16,8 +16,8 @@ export function OptimizePage() {
         <div>
           <h1>Optimize</h1>
           <p>
-            Improve how you recover tomorrow — without executing anything today. Pick the
-            unit of analysis that matches your question.
+            Improve how you recover tomorrow — without executing anything today. Choose the
+            tool that matches your question.
           </p>
         </div>
       </div>
@@ -25,14 +25,23 @@ export function OptimizePage() {
       {baseline.loading && <Loading size="sm" label="Portfolio snapshot" />}
 
       <div className="optimize-grid">
+        <Link to="/simulator" className="optimize-card">
+          <span className="optimize-card-kicker">Case · one receivable</span>
+          <h2>Case Simulator</h2>
+          <p>Test alternative actions for a specific case before you execute.</p>
+          <p className="optimize-card-question">
+            “What should I do for this specific case?”
+          </p>
+          <div className="optimize-card-meta">
+            <span>Compare actions · Monte Carlo outcomes</span>
+            <span className="optimize-card-cta">Open Simulator →</span>
+          </div>
+        </Link>
+
         <Link to="/strategy-lab" className="optimize-card">
           <span className="optimize-card-kicker">Portfolio · many cases</span>
           <h2>Recovery Strategy Lab</h2>
-          <p>
-            Design portfolio-wide recovery strategies and estimate their revenue impact.
-            Configure policy knobs, simulate cohorts, compare, then approve — never silent
-            execution.
-          </p>
+          <p>Compare recovery strategies across many cases — knobs, cohorts, trade-offs.</p>
           <p className="optimize-card-question">
             “What recovery strategy should I use across my business?”
           </p>
@@ -45,22 +54,6 @@ export function OptimizePage() {
               <span>Portfolio strategy what-if</span>
             )}
             <span className="optimize-card-cta">Open Strategy Lab →</span>
-          </div>
-        </Link>
-
-        <Link to="/simulator" className="optimize-card">
-          <span className="optimize-card-kicker">Case · one receivable</span>
-          <h2>Case Simulator</h2>
-          <p>
-            Test different actions for an individual recovery case before execution. Compare
-            expected recovery across reminders, repairs, escalations, and more.
-          </p>
-          <p className="optimize-card-question">
-            “What should I do for this specific case?”
-          </p>
-          <div className="optimize-card-meta">
-            <span>Compare actions · Monte Carlo outcomes</span>
-            <span className="optimize-card-cta">Open Simulator →</span>
           </div>
         </Link>
       </div>

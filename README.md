@@ -8,6 +8,8 @@ Revive Frontend is the **operations UI** for the Revive B2B receivables recovery
 
 **Case Assist** is the case-level operator workspace: open it from a specific receivable to diagnose why money is stuck, compare next actions against policy, draft operator-ready language, and confirm a path — always through the same Human Review / Execute gates as the rest of Ops. It is not another portfolio chatbot.
 
+**Recovery War Room** is the incident command center: when a high-impact recovery situation emerges, operators open a temporary workspace to correlate affected cases, see financial impact, approve a coordinated plan, and drive the incident to resolution — then capture a post-incident review. It sits above the case loop; it does not replace Control Tower, Case Assist, or Revive IQ.
+
 **Recovery Simulator** is a dedicated what-if sandbox: pick a receivable, build single- or multi-step strategies, tune assumptions, run seeded Monte Carlo simulations, compare scenarios, and see a transparent recommendation — without ever contacting the customer or changing case state.
 
 **Strategy Lab** is the portfolio layer above the Simulator: change recovery policy knobs (escalation threshold, window, contacts, automation bias), preview the population, simulate Current vs Proposed, compare trade-offs, and approve a strategy configuration — still without executing actions.
@@ -79,6 +81,8 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
                   │
              🗼 Control Tower ──► live pipeline · attention · Case Assist
                   │
+             🚨 War Room ──► incident command · correlate · plan · resolve
+                  │
              🧪 Simulator ──► strategy builder · Monte Carlo · compare · recommend
                   │
              ✦ Revive IQ ──► ask · evidence · sources · follow-ups (portfolio)
@@ -96,6 +100,7 @@ The frontend is a **thin Ops shell** over the Revive recovery loop. It does not 
 | ⚡ **Execute** | One authorized run per action; then monitoring proposes the next step |
 | 📡 **Monitoring** | Cases in outcome monitoring / escalated / recovered views |
 | 🗼 **Control Tower** | Live recovery pipeline, attention queue, activity · Case Assist on cases that need a next move |
+| 🚨 **Recovery War Room** | Incident-level command center — financial impact, diagnosis with evidence, coordinated plan, timeline, progress, postmortem |
 | 🧾 **Audit** | Paginated case list + newest-first scrollable timeline with case context |
 | 🧪 **Simulator** | Case-level recovery strategy sandbox — multi-step plans, constraints, Monte Carlo outcomes, scenario compare & recommendation (simulated only) |
 | 🧪 **Strategy Lab** | Portfolio policy what-if — population filters, knobs/presets, simulate Current vs Proposed, trade-offs, approve config (no execute) |
@@ -153,6 +158,24 @@ Case Assist is the Ops UI’s **case-scoped operator workspace** — not Revive 
 
 ---
 
+## 🚨 Recovery War Room
+
+Recovery War Room is for **exception handling and high-impact recovery incidents** — not another analytics dashboard.
+
+| Capability | What you see |
+|------------|----------------|
+| 💥 **Incident board** | Seeded demo incident (Enterprise Billing Failure) with severity + health |
+| 💰 **Financial impact** | Revenue at risk, recovered, P1 / customers / escalations |
+| 🧠 **Diagnosis + evidence** | Primary cause, confidence, cause mix, grounded evidence bullets |
+| 📋 **Coordinated plan** | Multi-step mitigation with Approve / Reject (intent only — existing gates still apply) |
+| 📈 **Progress** | What changed, forecast scenarios, simulate progress, resolve → postmortem |
+
+**Entry:** Overview → Recovery War Room, or Control Tower callout.
+
+**Boundary:** Orchestrates humans + AI around a situation. Does not bypass policy, silently execute, or auto-write Strategy Lab policies.
+
+---
+
 ## 🧪 Recovery Simulator
 
 The Recovery Simulator answers: **“If I take this recovery action on this receivable, what is likely to happen?”**
@@ -206,7 +229,7 @@ Backend: `POST /api/v1/strategy-lab/*` on Revive-Backend.
 
 ## 🔗 Related
 
-⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ** · **Case Assist** · Recovery Simulator (UI sandbox)
+⚙️ Engine: **revive-backend** — detect → diagnose → decide → validate → execute → monitor · forecast · simulate · analytics · **Revive IQ** · **Case Assist** · **Recovery War Room** · Recovery Simulator (UI sandbox)
 
 ---
 

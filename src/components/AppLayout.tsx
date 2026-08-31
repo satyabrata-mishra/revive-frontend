@@ -26,6 +26,11 @@ const menus: NavMenu[] = [
         purpose: 'Live ops view — what Revive is doing and what needs humans',
       },
       {
+        to: '/war-room',
+        label: 'Recovery War Room',
+        purpose: 'Critical recovery incidents — coordinate humans and AI to resolve',
+      },
+      {
         to: '/dashboard',
         label: 'Dashboard',
         purpose: 'Portfolio pulse — money at risk, recovered, and what needs attention',
